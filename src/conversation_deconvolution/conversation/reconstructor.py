@@ -2,13 +2,20 @@ import math
 
 import numpy as np
 
-from conversation_deconvolution.conversation.features import UnionFind
 from conversation_deconvolution.core.config import ReconstructionConfig
 from conversation_deconvolution.core.types import Conversation, Utterance
 
 
 def _overlap_duration(a: Utterance, b: Utterance) -> float:
     return max(0.0, min(a.end, b.end) - max(a.start, b.start))
+
+
+class _Stream:
+    def __init__(self):
+        self.members: list[int] = []
+        self.speakers: set[str] = set()
+        self.last_end = -math.inf
+        self.centroid = None
 
 
 class HeuristicReconstructor:
@@ -25,45 +32,67 @@ class HeuristicReconstructor:
         for u in ordered:
             if u.speaker:
                 spans.setdefault(u.speaker, []).append((u.start, u.end))
-        n = len(ordered)
-        uf = UnionFind()
-        successors: dict[int, list[tuple[float, int]]] = {}
-        for i in range(n):
-            candidates = []
-            for j in range(i + 1, n):
-                if self._speakers_conflict(ordered[i].speaker, ordered[j].speaker, spans):
+
+        streams: list[_Stream] = []
+        for i, u in enumerate(ordered):
+            best = None
+            best_score = self.cfg.threshold
+            for st in streams:
+                if self._conflicts(st, u.speaker, spans):
                     continue
-                score = self._pair_score(ordered[i], ordered[j], embeddings[i], embeddings[j])
-                if score >= self.cfg.threshold:
-                    candidates.append((score, j))
-            candidates.sort(key=lambda t: (-t[0], t[1]))
-            successors[i] = [j for _, j in candidates[: self.cfg.max_successors]]
-        for i in range(n):
-            for j in successors[i]:
-                uf.union(i, j)
-        roots_in_order: list[int] = []
-        for i in range(n):
-            root = uf.find(i)
-            if root not in roots_in_order:
-                roots_in_order.append(root)
+                score = self._stream_score(st, u, embeddings[i])
+                if score >= best_score:
+                    best_score = score
+                    best = st
+            if best is None:
+                best = _Stream()
+                streams.append(best)
+            self._assign(best, i, u, embeddings[i])
+
         conversations = []
-        for rank, root in enumerate(roots_in_order, start=1):
-            members = sorted(
-                (u for u_idx, u in enumerate(ordered) if uf.find(u_idx) == root),
-                key=lambda u: (u.start, u.end),
-            )
-            participants = []
-            for u in members:
-                if u.speaker and u.speaker not in participants:
-                    participants.append(u.speaker)
+        ranked = sorted(streams, key=lambda s: ordered[s.members[0]].start)
+        for rank, st in enumerate(ranked, start=1):
+            members = [ordered[i] for i in sorted(st.members, key=lambda j: (ordered[j].start, ordered[j].end))]
+            participants = list(dict.fromkeys(u.speaker for u in members if u.speaker))
             conversations.append(
                 Conversation(
                     id=f"conversation_{rank:02d}",
                     participants=participants,
-                    utterances=list(members),
+                    utterances=members,
                 )
             )
         return conversations
+
+    def _stream_score(self, st: _Stream, u: Utterance, e) -> float:
+        gap = max(0.0, u.start - st.last_end)
+        temporal = math.exp(-gap / self.cfg.tau)
+        same = 1.0 if (u.speaker and u.speaker in st.speakers) else 0.0
+        semantic = max(0.0, min(1.0, float(np.dot(e, st.centroid))))
+        return (
+            self.cfg.w_temporal * temporal
+            + self.cfg.w_semantic * semantic
+            + self.cfg.w_same_speaker * same
+        )
+
+    def _assign(self, st: _Stream, idx: int, u: Utterance, e) -> None:
+        st.members.append(idx)
+        if u.speaker:
+            st.speakers.add(u.speaker)
+        st.last_end = max(st.last_end, u.end)
+        if st.centroid is None:
+            st.centroid = e.copy()
+        else:
+            st.centroid = st.centroid + (e - st.centroid) / len(st.members)
+
+    def _conflicts(
+        self, st: _Stream, speaker: str | None, spans: dict[str, list[tuple[float, float]]]
+    ) -> bool:
+        if not speaker:
+            return False
+        others = st.speakers - {speaker}
+        return any(
+            self._speakers_conflict(speaker, other, spans) for other in others
+        )
 
     def _speakers_conflict(
         self,
@@ -84,28 +113,6 @@ class HeuristicReconstructor:
         dur_b = sum(e - s for s, e in spans[speaker_b])
         shorter = min(dur_a, dur_b) or 1e-9
         return overlap / shorter > self.cfg.max_speaker_overlap_ratio
-
-    def _pair_score(self, a: Utterance, b: Utterance, ea, eb) -> float:
-        overlap = _overlap_duration(a, b)
-        shorter = min(a.duration, b.duration) or 1e-9
-        if overlap / shorter > self.cfg.max_overlap_ratio:
-            return -1.0
-        raw_gap = b.start - a.end
-        gap_val = raw_gap if raw_gap >= 0 else -overlap
-        temporal = math.exp(-abs(gap_val) / self.cfg.tau)
-        same = 1.0 if (a.speaker and b.speaker and a.speaker == b.speaker) else 0.0
-        alternation = (
-            1.0
-            if (a.speaker and b.speaker and a.speaker != b.speaker and not same)
-            else 0.0
-        )
-        semantic = max(0.0, min(1.0, float(np.dot(ea, eb))))
-        return (
-            self.cfg.w_temporal * temporal
-            + self.cfg.w_alternation * alternation
-            + self.cfg.w_semantic * semantic
-            + self.cfg.w_same_speaker * same
-        )
 
     @staticmethod
     def _normalize(embeddings):
