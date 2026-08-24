@@ -41,6 +41,7 @@ def test_dense_interleaved_grouping_still_evaluated():
     m = evaluate_results(ref, hyp)
     assert m["pairwise_F1"] == 1.0
     assert m["ARI"] == 1.0
+    assert "WER (overlap)" in m
 
 
 def test_conversation_metrics_id_mapping():

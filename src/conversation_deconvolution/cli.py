@@ -199,6 +199,8 @@ def run_benchmark(n_datasets: int, base_seed: int, cfg: PipelineConfig) -> str:
         metrics = evaluate_results(gt_result, result)
         rows.append(metrics)
     header = ["DER", "WER (non-overlap)", "pairwise_F1", "ARI", "NMI"]
+    if any(r.get("WER (overlap)") is not None for r in rows):
+        header.insert(2, "WER (overlap)")
     lines = [
         "# Benchmark — Conversation Deconvolution",
         "",
@@ -210,7 +212,10 @@ def run_benchmark(n_datasets: int, base_seed: int, cfg: PipelineConfig) -> str:
         "|---|---|---|",
     ]
     for h in header:
-        values = [r[h] for r in rows]
+        values = [r[h] for r in rows if r.get(h) is not None]
+        if not values:
+            lines.append(f"| {h} | - | - |")
+            continue
         lines.append(f"| {h} | {np.mean(values):.4f} | {np.std(values):.4f} |")
     return "\n".join(lines) + "\n"
 
