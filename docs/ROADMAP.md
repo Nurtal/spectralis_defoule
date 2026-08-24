@@ -120,6 +120,11 @@ conversations, correction manuelle des associations, export.
 | M0 | ✅ fait |
 | M1 | ✅ fait |
 | M2 | ✅ fait — itération N2 : diarization sous-segment (fenêtre glissante 1,5 s / hop 0,5 s, vote temporel, clustering silhouette, k oracle) ; DER benchmark 12,5 % ± 3,5 (vs 34,6 % en N1) |
-| M3 | ✅ fait (overlap détecté + WER overlap/non-overlap ; séparation conditionnelle reportée — ADR-0004) |
+| M3 | ✅ fait — itération N3 : séparation conditionnelle SepFormer intégrée derrière flag (`--separate`, défaut off, ADR-0008) ; WER overlap dégradé avec tiges (1.00 vs 0.80 sans) mais grouping amélioré (ARI 0.26 / NMI 0.54) ; détail reports/benchmark.md |
 | M4 | ✅ fait — itération N2 : reconstruction par flux (décodage séquentiel contre extrémités de flux, cohésion même-locuteur, can't-link chevauchement) ; pairwise-F1 0,51 / ARI 0,20 sur benchmark. Limite : WER non-overlap 0,89 (tours fins sans séparation amont) |
-| M5 | ✅ fait (`deconvolute benchmark`) ; métriques grouping réparées (bug d'appariement d'ids — F1/ARI/NMI significatifs) |
+| M5 | ✅ fait (`deconvolute benchmark`) ; métriques grouping réparées (bug d'appariement d'ids — F1/ARI/NMI significatifs). N3 : rapport inclut WER overlap, OFF/ON comparables même seed |
+
+**Prochaine étape :** M6 — graphe de conversations (nœuds utterances,
+arêtes scorées enrichies, community detection vs baselines M4). En
+parallèle : itérations pour rendre la séparation ON rentable sur le WER
+overlap (ASR par tige + sélection texte-level, ADR-0008).

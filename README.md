@@ -729,7 +729,11 @@ Structure détaillée : `docs/superpowers/specs/` (design), `docs/adr/`
 
 **Projet :** expérimental / R&D
 
-**Phase actuelle :** Phases 0→5 implémentées (baseline mesurable)
+**Phase actuelle :** Phases 0→5 implémentées (baseline mesurable) ;
+itération N3 : séparation conditionnelle SepFormer intégrée derrière flag
+(`--separate`, désactivée par défaut — WER overlap dégradé mais grouping
+amélioré, voir ADR-0008 et `reports/benchmark.md`).
 
-**Prochaine étape :** benchmark à l'échelle, calibration des seuils,
-puis phase 6 (graphe de conversations).
+**Prochaine étape :** phase 6 — graphe de conversations ; en parallèle,
+rendre la séparation ON rentable sur le WER overlap (ASR par tige +
+sélection texte-level).
