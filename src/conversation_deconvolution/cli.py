@@ -122,15 +122,19 @@ def evaluate_results(ref, hyp) -> dict:
 
     gt_utts = [u for c in ref.conversations for u in c.utterances]
     pred_utts = [u for c in hyp.conversations for u in c.utterances]
-    non_overlap_gt = [
-        u for u in gt_utts if sum(_overlap(u, v) > 0.2 for v in gt_utts if v is not u) == 0
-    ]
-    matched = match_by_iou(non_overlap_gt, pred_utts, min_iou=0.2)
+    non_overlap_ids = {
+        u.id
+        for u in gt_utts
+        if sum(_overlap(u, v) > 0.2 for v in gt_utts if v is not u) == 0
+    }
+    matched = match_by_iou(gt_utts, pred_utts, min_iou=0.2)
+    matched_non_overlap = [(g, p) for g, p in matched if g.id in non_overlap_ids]
     wer_metrics = (
-        wer_report([(g.text, p.text) for g, p in matched]) if matched else {"wer": 1.0}
+        wer_report([(g.text, p.text) for g, p in matched_non_overlap])
+        if matched_non_overlap
+        else {"wer": 1.0}
     )
-    overlap_gt = [u for u in gt_utts if u not in non_overlap_gt]
-    matched_ov = match_by_iou(overlap_gt, pred_utts, min_iou=0.2)
+    matched_ov = [(g, p) for g, p in matched if g.id not in non_overlap_ids]
     wer_overlap = (
         wer_report([(g.text, p.text) for g, p in matched_ov])["wer"] if matched_ov else None
     )
@@ -179,6 +183,8 @@ def run_benchmark(n_datasets: int, base_seed: int, cfg: PipelineConfig) -> str:
     from conversation_deconvolution.synthetic.tts import PiperTts
 
     generator = SyntheticGenerator(PiperTts(), cfg.synthetic)
+    n_speakers = 2 * 2
+    cfg.diarization.num_speakers = n_speakers
     pipeline = build_pipeline(cfg)
     rows = []
     for k in range(n_datasets):
@@ -193,6 +199,7 @@ def run_benchmark(n_datasets: int, base_seed: int, cfg: PipelineConfig) -> str:
         "# Benchmark — Conversation Deconvolution",
         "",
         f"- datasets : {n_datasets}",
+        f"- locuteurs (oracle) : {n_speakers}",
         f"- seeds : {base_seed}…{base_seed + n_datasets - 1}",
         "",
         "| Métrique | moyenne | écart-type |",

@@ -42,8 +42,10 @@ def conversation_metrics(
     matched_keys: dict[str, str],
 ) -> dict:
     keys = sorted(matched_keys)
-    t = labels_from_conversations(true_conversations, [matched_keys[k] for k in keys])
-    p = labels_from_conversations(pred_conversations, keys)
+    t = labels_from_conversations(true_conversations, keys)
+    p = labels_from_conversations(
+        pred_conversations, [matched_keys[k] for k in keys]
+    )
     valid = (t >= 0) & (p >= 0)
     t, p = t[valid], p[valid]
     if len(t) == 0:
