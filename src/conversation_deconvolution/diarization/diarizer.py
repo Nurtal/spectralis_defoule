@@ -1,7 +1,11 @@
 import numpy as np
 
 from conversation_deconvolution.core.types import SpeakerTurn
-from conversation_deconvolution.diarization.timeline import merge_turns
+from conversation_deconvolution.diarization.timeline import (
+    make_windows,
+    merge_turns,
+    windows_to_turns,
+)
 
 
 class SpeakerDiarizer:
@@ -13,21 +17,25 @@ class SpeakerDiarizer:
 
     def diarize(self, audio: np.ndarray) -> tuple[list[SpeakerTurn], list[np.ndarray]]:
         result = self.vad.detect(audio)
-        kept_segments = []
-        embeddings = []
-        for seg in result.segments:
-            if seg.duration < self.cfg.min_segment_sec:
-                continue
-            s, e = int(seg.start * 16000), int(seg.end * 16000)
-            kept_segments.append(seg)
-            embeddings.append(self.embedder.embed(audio[s:e]))
-        if not kept_segments:
+        segments = [
+            s for s in result.segments if s.duration >= self.cfg.min_segment_sec
+        ]
+        windows = make_windows(segments, self.cfg.window_sec, self.cfg.hop_sec)
+        if not windows:
             return [], []
+        embeddings = [
+            self.embedder.embed(audio[int(s * 16000) : int(e * 16000)])
+            for s, e in windows
+        ]
         labels = self.clusterer.fit_predict(
             np.array(embeddings), n_speakers=self.cfg.num_speakers
         )
+        runs = windows_to_turns(
+            windows,
+            [int(l) for l in labels],
+            min_turn_sec=self.cfg.min_turn_sec,
+        )
         turns = [
-            SpeakerTurn(f"SPEAKER_{int(label):02d}", seg.start, seg.end)
-            for seg, label in zip(kept_segments, labels)
+            SpeakerTurn(f"SPEAKER_{lab:02d}", start, end) for lab, start, end in runs
         ]
-        return merge_turns(turns), embeddings
+        return merge_turns(turns, gap=self.cfg.hop_sec / 2), embeddings
