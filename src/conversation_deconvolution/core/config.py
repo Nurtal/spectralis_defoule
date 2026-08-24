@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -49,11 +49,11 @@ class SyntheticConfig:
 
 @dataclass
 class PipelineConfig:
-    vad: VadConfig = VadConfig()
-    diarization: DiarizationConfig = DiarizationConfig()
-    asr: AsrConfig = AsrConfig()
-    reconstruction: ReconstructionConfig = ReconstructionConfig()
-    synthetic: SyntheticConfig = SyntheticConfig()
+    vad: VadConfig = field(default_factory=VadConfig)
+    diarization: DiarizationConfig = field(default_factory=DiarizationConfig)
+    asr: AsrConfig = field(default_factory=AsrConfig)
+    reconstruction: ReconstructionConfig = field(default_factory=ReconstructionConfig)
+    synthetic: SyntheticConfig = field(default_factory=SyntheticConfig)
     text_embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
 
     @classmethod
