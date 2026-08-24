@@ -65,6 +65,17 @@ class SyntheticConfig:
 
 
 @dataclass
+class GraphConfig:
+    model_path: str = "models/graph_lr.json"
+    max_gap: float = 30.0
+    tau: float = 4.0
+    edge_threshold: float = 0.5
+    resolution: float = 1.0
+    seed: int = 0
+    negative_ratio: float = 3.0
+
+
+@dataclass
 class PipelineConfig:
     vad: VadConfig = field(default_factory=VadConfig)
     diarization: DiarizationConfig = field(default_factory=DiarizationConfig)
@@ -72,7 +83,9 @@ class PipelineConfig:
     asr: AsrConfig = field(default_factory=AsrConfig)
     reconstruction: ReconstructionConfig = field(default_factory=ReconstructionConfig)
     synthetic: SyntheticConfig = field(default_factory=SyntheticConfig)
+    graph: GraphConfig = field(default_factory=GraphConfig)
     text_embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
+    reconstructor_kind: str = "heuristic"
 
     @classmethod
     def default(cls) -> "PipelineConfig":
@@ -90,6 +103,7 @@ class PipelineConfig:
             "asr": AsrConfig,
             "reconstruction": ReconstructionConfig,
             "synthetic": SyntheticConfig,
+            "graph": GraphConfig,
         }
         kwargs: dict = {}
         for key, value in raw.items():

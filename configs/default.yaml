@@ -38,4 +38,13 @@ synthetic:
   mean_gap_sec: 0.8
   min_words: 3
   max_words: 14
+graph:
+  model_path: models/graph_lr.json
+  max_gap: 30.0
+  tau: 4.0
+  edge_threshold: 0.5
+  resolution: 1.0
+  seed: 0
+  negative_ratio: 3.0
+reconstructor_kind: heuristic
 text_embedding_model: paraphrase-multilingual-MiniLM-L12-v2

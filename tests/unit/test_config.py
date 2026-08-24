@@ -35,6 +35,24 @@ def test_unknown_key_raises(tmp_path):
         PipelineConfig.from_yaml(p)
 
 
+def test_graph_defaults():
+    cfg = PipelineConfig.default()
+    assert cfg.reconstructor_kind == "heuristic"
+    assert cfg.graph.model_path == "models/graph_lr.json"
+    assert cfg.graph.negative_ratio == 3.0
+
+
+def test_graph_section_loads(tmp_path):
+    p = tmp_path / "g.yaml"
+    p.write_text(
+        "graph:\n  edge_threshold: 0.6\n  resolution: 1.2\nreconstructor_kind: graph\n"
+    )
+    cfg = PipelineConfig.from_yaml(p)
+    assert cfg.graph.edge_threshold == 0.6
+    assert cfg.graph.resolution == 1.2
+    assert cfg.reconstructor_kind == "graph"
+
+
 def test_repo_default_yaml_loads():
     from pathlib import Path
 
