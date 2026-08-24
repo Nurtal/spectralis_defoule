@@ -42,6 +42,7 @@ def test_end_to_end_synthetic(tmp_path):
     gt = result_from_dict(load_json(ds / "ground_truth.json"))
     metrics = evaluate_results(gt, result)
     assert metrics["WER (non-overlap)"] < 1.0
+    assert metrics["DER"] < 0.30
     print(json.dumps(metrics, indent=2))
 
 

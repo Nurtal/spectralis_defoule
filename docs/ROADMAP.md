@@ -119,7 +119,7 @@ conversations, correction manuelle des associations, export.
 |---|---|
 | M0 | ✅ fait |
 | M1 | ✅ fait |
-| M2 | ✅ fait (DER 26,8 % sur sample synthétique) |
+| M2 | ✅ fait — itération N2 : diarization sous-segment (fenêtre glissante 1,5 s / hop 0,5 s, vote temporel, clustering silhouette, k oracle) ; DER benchmark 12,5 % ± 3,5 (vs 34,6 % en N1) |
 | M3 | ✅ fait (overlap détecté + WER overlap/non-overlap ; séparation conditionnelle reportée — ADR-0004) |
-| M4 | ✅ fait (baseline heuristique + pairwise-F1/ARI/NMI) |
-| M5 | ✅ fait (`deconvolute benchmark`) |
+| M4 | ✅ fait — itération N2 : reconstruction par flux (décodage séquentiel contre extrémités de flux, cohésion même-locuteur, can't-link chevauchement) ; pairwise-F1 0,51 / ARI 0,20 sur benchmark. Limite : WER non-overlap 0,89 (tours fins sans séparation amont) |
+| M5 | ✅ fait (`deconvolute benchmark`) ; métriques grouping réparées (bug d'appariement d'ids — F1/ARI/NMI significatifs) |
