@@ -22,6 +22,15 @@ class DiarizationConfig:
 
 
 @dataclass
+class SeparationConfig:
+    enabled: bool = False
+    model_name: str = "speechbrain/sepformer-wsj02m"
+    device: str | None = None
+    min_region_sec: float = 0.4
+    pad_sec: float = 0.25
+
+
+@dataclass
 class AsrConfig:
     model_size: str = "small"
     device: str = "cuda"
@@ -57,6 +66,7 @@ class SyntheticConfig:
 class PipelineConfig:
     vad: VadConfig = field(default_factory=VadConfig)
     diarization: DiarizationConfig = field(default_factory=DiarizationConfig)
+    separation: SeparationConfig = field(default_factory=SeparationConfig)
     asr: AsrConfig = field(default_factory=AsrConfig)
     reconstruction: ReconstructionConfig = field(default_factory=ReconstructionConfig)
     synthetic: SyntheticConfig = field(default_factory=SyntheticConfig)

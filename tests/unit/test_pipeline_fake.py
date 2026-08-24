@@ -36,7 +36,9 @@ class FakeDiarizer:
 
 class FakeSeparator:
     def separate(self, mix, regions):
-        return [np.asarray(mix).copy()]
+        from conversation_deconvolution.core.types import SeparationResult
+
+        return SeparationResult(mix=np.asarray(mix).copy())
 
 
 class FakeAsr:

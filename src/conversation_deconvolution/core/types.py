@@ -1,5 +1,7 @@
 from dataclasses import asdict, dataclass, field
 
+import numpy as np
+
 
 @dataclass(frozen=True)
 class Segment:
@@ -9,6 +11,22 @@ class Segment:
     @property
     def duration(self) -> float:
         return self.end - self.start
+
+
+@dataclass(frozen=True)
+class SeparatedRegion:
+    segment: Segment
+    stems: list[np.ndarray]
+
+
+@dataclass
+class SeparationResult:
+    mix: np.ndarray
+    regions: list[SeparatedRegion] = field(default_factory=list)
+
+    @property
+    def sources(self) -> list[np.ndarray]:
+        return [self.mix]
 
 
 @dataclass(frozen=True)
