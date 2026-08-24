@@ -36,7 +36,8 @@ class ReconstructionConfig:
     tau: float = 4.0
     w_temporal: float = 0.25
     w_alternation: float = 0.15
-    w_semantic: float = 0.6
+    w_semantic: float = 0.45
+    w_same_speaker: float = 0.55
     threshold: float = 0.5
     max_overlap_ratio: float = 0.5
     max_successors: int = 2

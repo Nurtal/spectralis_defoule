@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from conversation_deconvolution.diarization.clusterer import AgglomerativeClusterer
 

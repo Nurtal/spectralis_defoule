@@ -67,12 +67,18 @@ class HeuristicReconstructor:
         raw_gap = b.start - a.end
         gap_val = raw_gap if raw_gap >= 0 else -overlap
         temporal = math.exp(-abs(gap_val) / self.cfg.tau)
-        alternation = 1.0 if (a.speaker and b.speaker and a.speaker != b.speaker) else 0.0
+        same = 1.0 if (a.speaker and b.speaker and a.speaker == b.speaker) else 0.0
+        alternation = (
+            1.0
+            if (a.speaker and b.speaker and a.speaker != b.speaker and not same)
+            else 0.0
+        )
         semantic = max(0.0, min(1.0, float(np.dot(ea, eb))))
         return (
             self.cfg.w_temporal * temporal
             + self.cfg.w_alternation * alternation
             + self.cfg.w_semantic * semantic
+            + self.cfg.w_same_speaker * same
         )
 
     @staticmethod

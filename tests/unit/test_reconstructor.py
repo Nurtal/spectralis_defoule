@@ -90,3 +90,29 @@ def test_full_overlap_never_linked():
         TopicTextEmbedder(TOPICS), ReconstructionConfig()
     ).reconstruct(utts)
     assert len(convs) == 2
+
+
+def test_same_speaker_links_across_large_gap():
+    utts = [
+        U("a1", "A", 0.0, 1.5, "salut comment ca va aujourd hui"),
+        U("b1", "B", 1.6, 3.0, "le rapport final est termine"),
+        U("a2", "A", 12.0, 13.5, "bon je dois y aller salut"),
+    ]
+    cfg = ReconstructionConfig()
+    convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg).reconstruct(utts)
+    members = sorted(tuple(sorted(u.id for u in c.utterances)) for c in convs)
+    assert ("a1", "a2") in [m for m in members]
+
+
+def test_same_speaker_beats_semantic_drift():
+    # a2 shares speaker A with a1 but its text is closer to b1's topic;
+    # the same-speaker weight must keep a1-a2 together.
+    utts = [
+        U("a1", "A", 0.0, 1.5, "le rapport final est termine"),
+        U("b1", "B", 1.6, 3.0, "tu viens au cafe a midi"),
+        U("a2", "A", 3.4, 4.8, "le rapport avance bien vite"),
+    ]
+    cfg = ReconstructionConfig(w_same_speaker=0.6)
+    convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg).reconstruct(utts)
+    members = sorted(tuple(sorted(u.id for u in c.utterances)) for c in convs)
+    assert any(set(m) == {"a1", "a2"} for m in members)
