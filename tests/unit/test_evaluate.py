@@ -1,3 +1,4 @@
+
 from conversation_deconvolution.cli import evaluate_results
 from conversation_deconvolution.core.types import Conversation, TranscriptResult
 
@@ -54,7 +55,8 @@ def test_conversation_metrics_id_mapping():
     ref = [_conv("c1", [U("a1", 0, 1), U("a2", 2, 3)]), _conv("c2", [U("b1", 4, 5)])]
     hyp = [_conv("k1", [U("p1", 0, 1)]), _conv("k2", [U("p2", 2, 3), U("p3", 4, 5)])]
     m = conversation_metrics(ref, hyp, {"a1": "p1", "a2": "p2", "b1": "p3"})
-    # truth pairs (a1,a2) predicted split -> F1 < 1 but nonzero wiring
+    # only true pair (a1,a2) is split across predicted conversations: tp=0
     assert m["pairwise_f1"] == 0.0
-    m2 = conversation_metrics(ref, hyp, {"a1": "p2", "a2": "p2", "b1": "p3"})
+    # both GT utterances of c1 matched to predicted utterances of k1: perfect
+    m2 = conversation_metrics(ref, hyp, {"a1": "p1", "a2": "p1", "b1": "p3"})
     assert m2["pairwise_f1"] == 1.0
