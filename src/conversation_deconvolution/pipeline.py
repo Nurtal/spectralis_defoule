@@ -164,12 +164,25 @@ class DeconvolutionPipeline:
         return result
 
 
+def build_reconstructor(config: PipelineConfig, text_embedder):
+    if config.reconstructor_kind == "graph":
+        from conversation_deconvolution.conversation.graph_reconstructor import (
+            GraphReconstructor,
+        )
+
+        return GraphReconstructor(text_embedder, config.graph)
+    if config.reconstructor_kind == "heuristic":
+        from conversation_deconvolution.conversation.reconstructor import (
+            HeuristicReconstructor,
+        )
+
+        return HeuristicReconstructor(text_embedder, config.reconstruction)
+    raise ValueError(f"unknown reconstructor_kind: {config.reconstructor_kind}")
+
+
 def build_pipeline(config: PipelineConfig) -> DeconvolutionPipeline:
     from conversation_deconvolution.asr.faster_whisper_asr import FasterWhisperAsr
     from conversation_deconvolution.audio.vad import SileroVad
-    from conversation_deconvolution.conversation.reconstructor import (
-        HeuristicReconstructor,
-    )
     from conversation_deconvolution.conversation.semantic import (
         SentenceTransformerEmbedder,
     )
@@ -188,7 +201,7 @@ def build_pipeline(config: PipelineConfig) -> DeconvolutionPipeline:
     clusterer = AgglomerativeClusterer(config.diarization.distance_threshold)
     diarizer = SpeakerDiarizer(vad, embedder, clusterer, config.diarization)
     text_embedder = SentenceTransformerEmbedder(config.text_embedding_model)
-    reconstructor = HeuristicReconstructor(text_embedder, config.reconstruction)
+    reconstructor = build_reconstructor(config, text_embedder)
     separator = (
         SepformerSeparator(config.separation)
         if config.separation.enabled

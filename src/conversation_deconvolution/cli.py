@@ -25,12 +25,15 @@ def run(
     num_speakers: int = typer.Option(None, "--num-speakers", "-n"),
     plot: Path = typer.Option(None, "--plot", "-p"),
     separate: bool = typer.Option(None, "--separate/--no-separate"),
+    reconstructor: str = typer.Option(None, "--reconstructor", "-r"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if num_speakers:
         cfg.diarization.num_speakers = num_speakers
     if separate is not None:
         cfg.separation.enabled = separate
+    if reconstructor is not None:
+        cfg.reconstructor_kind = reconstructor
     from conversation_deconvolution.conversation.viz import plot_timeline
     from conversation_deconvolution.pipeline import build_pipeline
 
@@ -93,11 +96,19 @@ def benchmark(
     seed: int = typer.Option(1234, "--seed"),
     config_path: Path = typer.Option(None, "--config", "-c"),
     separate: bool = typer.Option(None, "--separate/--no-separate"),
+    reconstructor: str = typer.Option("heuristic", "--reconstructor"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if separate is not None:
         cfg.separation.enabled = separate
-    report = run_benchmark(datasets, seed, cfg)
+    kinds = {
+        "both": ["heuristic", "graph"],
+        "heuristic": ["heuristic"],
+        "graph": ["graph"],
+    }.get(reconstructor)
+    if kinds is None:
+        raise typer.BadParameter("--reconstructor: heuristic|graph|both")
+    report = run_benchmark(datasets, seed, cfg, kinds)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(report)
     console.print(f"[green]✓[/green] rapport → {out}")
@@ -234,7 +245,9 @@ def _overlap(a, b) -> float:
     return max(0.0, min(a.end, b.end) - max(a.start, b.start))
 
 
-def run_benchmark(n_datasets: int, base_seed: int, cfg: PipelineConfig) -> str:
+def run_benchmark(
+    n_datasets: int, base_seed: int, cfg: PipelineConfig, kinds: list[str]
+) -> str:
     from conversation_deconvolution.audio.loader import load_audio
     from conversation_deconvolution.core.types import result_from_dict
     from conversation_deconvolution.pipeline import build_pipeline
@@ -244,18 +257,10 @@ def run_benchmark(n_datasets: int, base_seed: int, cfg: PipelineConfig) -> str:
     generator = SyntheticGenerator(PiperTts(), cfg.synthetic)
     n_speakers = 2 * 2
     cfg.diarization.num_speakers = n_speakers
-    pipeline = build_pipeline(cfg)
-    rows = []
+    ds_dirs = []
     for k in range(n_datasets):
         ds_dir = Path(f"data/synthetic/bench_{base_seed}_{k}")
-        gen_dir = generator.generate(ds_dir, seed=base_seed + k)
-        result = pipeline.run(load_audio(gen_dir / "mixed.wav"))
-        gt_result = result_from_dict(_load(gen_dir / "ground_truth.json"))
-        metrics = evaluate_results(gt_result, result)
-        rows.append(metrics)
-    header = ["DER", "WER (non-overlap)", "pairwise_F1", "ARI", "NMI"]
-    if any(r.get("WER (overlap)") is not None for r in rows):
-        header.insert(2, "WER (overlap)")
+        ds_dirs.append(generator.generate(ds_dir, seed=base_seed + k))
     lines = [
         "# Benchmark — Conversation Deconvolution",
         "",
@@ -263,16 +268,37 @@ def run_benchmark(n_datasets: int, base_seed: int, cfg: PipelineConfig) -> str:
         f"- locuteurs (oracle) : {n_speakers}",
         f"- seeds : {base_seed}…{base_seed + n_datasets - 1}",
         "",
+    ]
+    for kind in kinds:
+        cfg.reconstructor_kind = kind
+        pipeline = build_pipeline(cfg)
+        rows = []
+        for gen_dir in ds_dirs:
+            result = pipeline.run(load_audio(gen_dir / "mixed.wav"))
+            gt_result = result_from_dict(_load(gen_dir / "ground_truth.json"))
+            rows.append(evaluate_results(gt_result, result))
+        lines += format_section(kind, rows)
+        lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def format_section(kind: str, rows: list[dict]) -> list[str]:
+    header = ["DER", "WER (non-overlap)", "pairwise_F1", "ARI", "NMI"]
+    if any(r.get("WER (overlap)") is not None for r in rows):
+        header.insert(2, "WER (overlap)")
+    out = [
+        f"## Reconstruteur : {kind}",
+        "",
         "| Métrique | moyenne | écart-type |",
         "|---|---|---|",
     ]
     for h in header:
         values = [r[h] for r in rows if r.get(h) is not None]
         if not values:
-            lines.append(f"| {h} | - | - |")
-            continue
-        lines.append(f"| {h} | {np.mean(values):.4f} | {np.std(values):.4f} |")
-    return "\n".join(lines) + "\n"
+            out.append(f"| {h} | - | - |")
+        else:
+            out.append(f"| {h} | {np.mean(values):.4f} | {np.std(values):.4f} |")
+    return out
 
 
 if __name__ == "__main__":
