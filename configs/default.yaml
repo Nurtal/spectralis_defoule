@@ -6,6 +6,9 @@ diarization:
   distance_threshold: 0.75
   min_segment_sec: 0.4
   num_speakers: null
+  window_sec: 1.5
+  hop_sec: 0.5
+  min_turn_sec: 0.3
 asr:
   model_size: small
   device: cuda
