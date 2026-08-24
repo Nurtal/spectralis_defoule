@@ -1,11 +1,9 @@
 import json
-from pathlib import Path
 
 import pytest
 
 from conversation_deconvolution.audio.loader import load_audio
 from conversation_deconvolution.core.config import PipelineConfig, SyntheticConfig
-from conversation_deconvolution.evaluation.der import diarization_error_rate
 from conversation_deconvolution.synthetic.generator import SyntheticGenerator
 from conversation_deconvolution.synthetic.tts import PiperTts
 
@@ -19,11 +17,12 @@ def test_end_to_end_synthetic(tmp_path):
     from conversation_deconvolution.core.types import result_from_dict
     from conversation_deconvolution.pipeline import build_pipeline
 
-    gen = SyntheticGenerator(
-        PiperTts(), SyntheticConfig(snr_db=20.0, mean_gap_sec=0.6)
-    )
+    gen = SyntheticGenerator(PiperTts(), SyntheticConfig(snr_db=20.0, mean_gap_sec=0.6))
     ds = gen.generate(
-        tmp_path / "ds", seed=7, n_conversations=2, speakers_per_thread=2,
+        tmp_path / "ds",
+        seed=7,
+        n_conversations=2,
+        speakers_per_thread=2,
         n_lines=(3, 4),
     )
     audio, sr = sf.read(ds / "mixed.wav", dtype="float32")
@@ -48,15 +47,18 @@ def test_end_to_end_synthetic(tmp_path):
 
 @pytest.mark.slow
 def test_diarizer_separates_two_real_voices(tmp_path):
+    from conversation_deconvolution.audio.vad import SileroVad
+    from conversation_deconvolution.core.config import DiarizationConfig, VadConfig
     from conversation_deconvolution.diarization.clusterer import AgglomerativeClusterer
     from conversation_deconvolution.diarization.diarizer import SpeakerDiarizer
     from conversation_deconvolution.diarization.embeddings import EcapaEmbedder
-    from conversation_deconvolution.audio.vad import SileroVad
-    from conversation_deconvolution.core.config import DiarizationConfig, VadConfig
 
     gen = SyntheticGenerator(PiperTts(), SyntheticConfig(mean_gap_sec=0.7))
     ds = gen.generate(
-        tmp_path / "ds2", seed=5, n_conversations=1, speakers_per_thread=2,
+        tmp_path / "ds2",
+        seed=5,
+        n_conversations=1,
+        speakers_per_thread=2,
         n_lines=(3, 3),
     )
     audio = load_audio(ds / "mixed.wav")

@@ -129,6 +129,11 @@ def evaluate_results(ref, hyp) -> dict:
     wer_metrics = (
         wer_report([(g.text, p.text) for g, p in matched]) if matched else {"wer": 1.0}
     )
+    overlap_gt = [u for u in gt_utts if u not in non_overlap_gt]
+    matched_ov = match_by_iou(overlap_gt, pred_utts, min_iou=0.2)
+    wer_overlap = (
+        wer_report([(g.text, p.text) for g, p in matched_ov])["wer"] if matched_ov else None
+    )
 
     keys = {g.id: p.id for g, p in matched}
     conv_metrics = (
