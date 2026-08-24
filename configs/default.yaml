@@ -15,10 +15,11 @@ asr:
 reconstruction:
   max_gap: 30.0
   tau: 4.0
-  w_temporal: 0.5
+  w_temporal: 0.25
   w_alternation: 0.15
-  w_semantic: 0.35
-  threshold: 0.45
+  w_semantic: 0.6
+  threshold: 0.5
+  max_overlap_ratio: 0.5
   max_successors: 2
 synthetic:
   sample_rate: 16000
