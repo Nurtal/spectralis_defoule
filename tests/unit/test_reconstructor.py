@@ -9,14 +9,19 @@ from conversation_deconvolution.core.types import Utterance
 
 
 class TopicTextEmbedder:
-    def __init__(self, dim: int = 256):
+    def __init__(self, topics: dict[str, list[str]], dim: int = 64):
         self.dim = dim
+        self.word_topic: dict[str, np.ndarray] = {}
+        for k, topic in enumerate(sorted(topics)):
+            anchor = np.zeros(dim)
+            anchor[k % dim] = 1.0
+            for w in topics[topic]:
+                self.word_topic[w] = anchor
 
-    def _word_vec(self, word: str) -> np.ndarray:
+    def _noise_vec(self, word: str) -> np.ndarray:
         h = hashlib.md5(word.encode()).digest()
-        idx = h[0] % self.dim
         v = np.zeros(self.dim)
-        v[idx] = 1.0 + (h[1] % 7) / 10.0
+        v[h[0] % self.dim] = 0.05
         return v
 
     def encode(self, texts):
@@ -24,10 +29,16 @@ class TopicTextEmbedder:
         for t in texts:
             v = np.zeros(self.dim)
             for w in t.lower().split():
-                v += self._word_vec(w)
+                v += self.word_topic.get(w, self._noise_vec(w))
             n = np.linalg.norm(v)
             out.append(v / n if n else v)
         return np.array(out)
+
+
+TOPICS = {
+    "cafe": ["viens", "cafe", "demain", "midi", "parfait", "reponds", "tard"],
+    "rapport": ["rapport", "final", "termine", "merci", "beaucoup", "courrier"],
+}
 
 
 def U(i, s, a, b, text):
@@ -35,7 +46,7 @@ def U(i, s, a, b, text):
 
 
 def test_empty_returns_empty():
-    r = HeuristicReconstructor(TopicTextEmbedder(), ReconstructionConfig())
+    r = HeuristicReconstructor(TopicTextEmbedder(TOPICS), ReconstructionConfig())
     assert r.reconstruct([]) == []
 
 
@@ -44,7 +55,7 @@ def test_single_conversation():
         U("u1", "A", 0.0, 1.5, "tu viens au cafe demain"),
         U("u2", "B", 1.8, 3.0, "oui je viens au cafe demain"),
     ]
-    convs = HeuristicReconstructor(TopicTextEmbedder(), ReconstructionConfig()).reconstruct(utts)
+    convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), ReconstructionConfig()).reconstruct(utts)
     assert len(convs) == 1
     assert convs[0].id == "conversation_01"
     assert convs[0].participants == ["A", "B"]
@@ -61,7 +72,7 @@ def test_two_interleaved_threads_separated():
         U("c3", "C", 4.9, 6.4, "le rapport part au courrier"),
     ]
     cfg = ReconstructionConfig()
-    convs = HeuristicReconstructor(TopicTextEmbedder(), cfg).reconstruct(utts)
+    convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg).reconstruct(utts)
     assert len(convs) == 2
     members = sorted(tuple(sorted(u.id for u in c.utterances)) for c in convs)
     assert members == [("a1", "a2", "a3"), ("c1", "c2", "c3")]
@@ -74,5 +85,5 @@ def test_full_overlap_never_linked():
         U("x1", "A", 0.0, 2.0, "meme sujet identique ici"),
         U("x2", "B", 0.1, 2.0, "meme sujet identique la"),
     ]
-    convs = HeuristicReconstructor(TopicTextEmbedder(), ReconstructionConfig()).reconstruct(utts)
+    convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), ReconstructionConfig()).reconstruct(utts)
     assert len(convs) == 2
