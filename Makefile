@@ -8,4 +8,6 @@ test-slow:
 	uv run pytest -q -m slow tests/integration
 benchmark:
 	uv run deconvolute benchmark --datasets 3 --out reports/benchmark.md
-.PHONY: lint format test test-slow benchmark
+train:
+	uv run deconvolute train --datasets 8 --out models/graph_lr.json
+.PHONY: lint format test test-slow benchmark train

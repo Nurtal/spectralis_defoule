@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -100,6 +101,60 @@ def benchmark(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(report)
     console.print(f"[green]✓[/green] rapport → {out}")
+
+
+@app.command()
+def train(
+    datasets: int = typer.Option(8, "--datasets"),
+    out: Path = typer.Option("models/graph_lr.json", "--out"),
+    seed_base: int = typer.Option(3000, "--seed-base"),
+    conversations: int = typer.Option(2, "--conversations"),
+    speakers: int = typer.Option(2, "--speakers"),
+    config_path: Path = typer.Option(None, "--config", "-c"),
+):
+    cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
+    from conversation_deconvolution.conversation.pair_features import (
+        pair_feature_names,
+    )
+    from conversation_deconvolution.conversation.semantic import (
+        SentenceTransformerEmbedder,
+    )
+    from conversation_deconvolution.conversation.trainer import (
+        build_training_set,
+        fit_edge_classifier,
+        save_model,
+    )
+    from conversation_deconvolution.synthetic.generator import SyntheticGenerator
+    from conversation_deconvolution.synthetic.tts import PiperTts
+
+    generator = SyntheticGenerator(PiperTts(), cfg.synthetic)
+    dirs = []
+    for k in range(datasets):
+        target = Path(f"data/synthetic/train_{seed_base}_{k}")
+        generator.generate(
+            target,
+            seed=seed_base + k,
+            n_conversations=conversations,
+            speakers_per_thread=speakers,
+        )
+        dirs.append(target)
+        console.print(f"[green]✓[/green] dataset {k + 1}/{datasets} → {target}")
+    embedder = SentenceTransformerEmbedder(cfg.text_embedding_model)
+    X, y = build_training_set(dirs, embedder, cfg.graph, rng_seed=cfg.graph.seed)
+    model = fit_edge_classifier(X, y, pair_feature_names(), seed=cfg.graph.seed)
+    model["meta"].update(
+        {
+            "n_datasets": datasets,
+            "seed_base": seed_base,
+            "negative_ratio": cfg.graph.negative_ratio,
+            "trained_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        }
+    )
+    save_model(model, out)
+    console.print(
+        f"[green]✓[/green] classifieur entraîné "
+        f"({len(y)} paires, F1 arêtes CV={model['meta']['pairwise_cv_f1']:.3f}) → {out}"
+    )
 
 
 @app.command()
