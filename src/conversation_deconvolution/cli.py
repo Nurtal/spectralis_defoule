@@ -23,10 +23,13 @@ def run(
     config_path: Path = typer.Option(None, "--config", "-c"),
     num_speakers: int = typer.Option(None, "--num-speakers", "-n"),
     plot: Path = typer.Option(None, "--plot", "-p"),
+    separate: bool = typer.Option(None, "--separate/--no-separate"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if num_speakers:
         cfg.diarization.num_speakers = num_speakers
+    if separate is not None:
+        cfg.separation.enabled = separate
     from conversation_deconvolution.conversation.viz import plot_timeline
     from conversation_deconvolution.pipeline import build_pipeline
 
@@ -88,8 +91,11 @@ def benchmark(
     out: Path = typer.Option("reports/benchmark.md", "--out"),
     seed: int = typer.Option(1234, "--seed"),
     config_path: Path = typer.Option(None, "--config", "-c"),
+    separate: bool = typer.Option(None, "--separate/--no-separate"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
+    if separate is not None:
+        cfg.separation.enabled = separate
     report = run_benchmark(datasets, seed, cfg)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(report)

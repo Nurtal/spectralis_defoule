@@ -2,7 +2,11 @@
 import pytest
 
 from conversation_deconvolution.core.types import Segment
-from conversation_deconvolution.diarization.timeline import make_windows, windows_to_turns
+from conversation_deconvolution.diarization.timeline import (
+    make_windows,
+    margin_regions,
+    windows_to_turns,
+)
 
 
 def test_make_windows_covers_segment():
@@ -50,3 +54,33 @@ def test_short_spurious_run_absorbed():
     turns = windows_to_turns(wins, labels, cell_sec=0.1, min_turn_sec=0.5)
     assert len(turns) == 1
     assert turns[0][0] == 0
+
+
+def test_margin_regions_detect_contested_zone():
+    # windows 0-1s and 2-3s are cleanly owned; 1-2s alternates owners with
+    # near-evidence -> contested zone flagged
+    wins = [
+        (0.0, 1.0),
+        (0.5, 1.5),
+        (0.5, 1.5),
+        (1.0, 2.0),
+        (1.0, 2.0),
+        (1.5, 2.5),
+        (1.5, 2.5),
+        (2.0, 3.0),
+    ]
+    labels = [0, 0, 1, 1, 0, 0, 1, 0]
+    regions = margin_regions(
+        wins, labels, cell_sec=0.25, min_margin=0.34, min_duration=0.3
+    )
+    # contradictory window pairs span [0.5, 2.5]
+    assert regions == [Segment(0.5, 2.5)]
+
+
+def test_margin_regions_clean_track_has_none():
+    wins = [(i * 1.0, (i + 1) * 1.0) for i in range(4)]
+    labels = [0, 0, 1, 1]
+    assert (
+        margin_regions(wins, labels, cell_sec=0.25, min_margin=0.34, min_duration=0.3)
+        == []
+    )

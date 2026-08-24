@@ -27,6 +27,26 @@ def make_windows(
     return windows
 
 
+def _vote_cells(
+    windows: list[tuple[float, float]],
+    labels: list[int],
+    t0: float,
+    n_cells: int,
+    cell_sec: float,
+) -> np.ndarray:
+    n_labels = max(labels) + 1
+    votes = np.zeros((n_cells, n_labels))
+    for (ws, we), lab in zip(windows, labels):
+        c0 = int((ws - t0) / cell_sec)
+        c1 = math.ceil((we - t0) / cell_sec)
+        for c in range(max(0, c0), min(n_cells, c1)):
+            cs = c * cell_sec
+            overlap = min(we, cs + cell_sec) - max(ws, cs)
+            if overlap > 0:
+                votes[c, lab] += overlap
+    return votes
+
+
 def windows_to_turns(
     windows: list[tuple[float, float]],
     labels: list[int],
@@ -38,16 +58,7 @@ def windows_to_turns(
     t0 = min(s for s, _ in windows)
     t1 = max(e for _, e in windows)
     n_cells = max(1, math.ceil((t1 - t0 - 1e-9) / cell_sec))
-    n_labels = max(labels) + 1
-    votes = np.zeros((n_cells, n_labels))
-    for (ws, we), lab in zip(windows, labels):
-        c0 = int((ws - t0) / cell_sec)
-        c1 = math.ceil((we - t0) / cell_sec)
-        for c in range(max(0, c0), min(n_cells, c1)):
-            cs = c * cell_sec
-            overlap = min(we, cs + cell_sec) - max(ws, cs)
-            if overlap > 0:
-                votes[c, lab] += overlap
+    votes = _vote_cells(windows, labels, t0, n_cells, cell_sec)
 
     assigned: list[int] = []
     prev = -1
@@ -135,3 +146,42 @@ def merge_adjacent(segments: list[Segment], eps: float = 1e-9) -> list[Segment]:
         else:
             out.append(s)
     return out
+
+
+def margin_regions(
+    windows: list[tuple[float, float]],
+    labels: list[int],
+    cell_sec: float = 0.25,
+    min_margin: float = 0.34,
+    min_duration: float = 0.3,
+) -> list[Segment]:
+    if not windows:
+        return []
+    t0 = min(s for s, _ in windows)
+    t1 = max(e for _, e in windows)
+    n_cells = max(1, math.ceil((t1 - t0 - 1e-9) / cell_sec))
+    votes = _vote_cells(windows, labels, t0, n_cells, cell_sec)
+    contested: list[float] = []
+    for c in range(n_cells):
+        col = votes[c]
+        total = float(col.sum())
+        if total <= 0:
+            contested.append(1.0)
+            continue
+        ordered = np.sort(col)[::-1]
+        top2 = float(ordered[1]) if len(ordered) > 1 else 0.0
+        contested.append((float(ordered[0]) - top2) / total)
+
+    regions = []
+    start = None
+    for c in range(n_cells + 1):
+        low = c < n_cells and contested[c] < min_margin
+        if low and start is None:
+            start = c
+        elif not low and start is not None:
+            seg_start = t0 + start * cell_sec
+            seg_end = t0 + c * cell_sec
+            if seg_end - seg_start >= min_duration:
+                regions.append(Segment(seg_start, seg_end))
+            start = None
+    return regions

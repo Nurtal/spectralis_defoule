@@ -71,3 +71,48 @@ def test_diarizer_separates_two_real_voices(tmp_path):
     )
     turns, _ = diarizer.diarize(audio)
     assert len({t.speaker for t in turns}) == 2
+
+
+@pytest.mark.slow
+def test_sepformer_separates_overlap_region(tmp_path):
+    import numpy as np
+
+    from conversation_deconvolution.separation.sepformer import SepformerSeparator
+    from conversation_deconvolution.synthetic.tts import PiperTts
+
+    gen = SyntheticGenerator(PiperTts(), SyntheticConfig(snr_db=20.0, mean_gap_sec=0.5))
+    ds = gen.generate(
+        tmp_path / "ds3", seed=11, n_conversations=2, speakers_per_thread=2, n_lines=(4, 4)
+    )
+    audio = load_audio(ds / "mixed.wav")
+
+    from conversation_deconvolution.audio.vad import SileroVad
+    from conversation_deconvolution.core.config import (
+        DiarizationConfig,
+        SeparationConfig,
+        VadConfig,
+    )
+    from conversation_deconvolution.diarization.clusterer import AgglomerativeClusterer
+    from conversation_deconvolution.diarization.diarizer import SpeakerDiarizer
+    from conversation_deconvolution.diarization.embeddings import EcapaEmbedder
+    from conversation_deconvolution.diarization.timeline import overlap_regions
+
+    turns, _ = SpeakerDiarizer(
+        SileroVad(VadConfig()),
+        EcapaEmbedder(),
+        AgglomerativeClusterer(),
+        DiarizationConfig(num_speakers=2),
+    ).diarize(audio)
+    regions = overlap_regions(turns)
+    assert regions, "expected at least one overlap region"
+
+    sep = SepformerSeparator(SeparationConfig())
+    result = sep.separate(audio, regions)
+    region = result.regions[0]
+    n = len(audio[int(region.segment.start * 16000) : int(region.segment.end * 16000)])
+    assert len(region.stems) == 2
+    for stem in region.stems:
+        assert len(stem) == n and np.isfinite(stem).all()
+    rms_a = float(np.sqrt(np.mean(region.stems[0] ** 2)))
+    rms_b = float(np.sqrt(np.mean(region.stems[1] ** 2)))
+    assert max(rms_a, rms_b) > 0.01

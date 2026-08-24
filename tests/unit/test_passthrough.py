@@ -1,11 +1,11 @@
 import numpy as np
 
-from conversation_deconvolution.core.types import Segment
-from conversation_deconvolution.separation.passthrough import (
-    PassthroughSeparator,
+from conversation_deconvolution.core.types import (
+    Segment,
     SeparatedRegion,
     SeparationResult,
 )
+from conversation_deconvolution.separation.passthrough import PassthroughSeparator
 
 
 def test_passthrough_mix_only_and_isolated():
