@@ -31,8 +31,10 @@ def test_overlap_disjoint_empty():
 
 def test_clusterer_separates_two_blobs_without_k():
     rng = np.random.default_rng(0)
-    blob_a = rng.normal(0, 0.05, size=(12, 16))
-    blob_b = rng.normal(1.0, 0.05, size=(12, 16))
+    d = np.zeros(16); d[0] = 3.0
+    e = np.zeros(16); e[1] = 3.0
+    blob_a = d + rng.normal(0, 0.05, size=(12, 16))
+    blob_b = e + rng.normal(0, 0.05, size=(12, 16))
     X = np.vstack([blob_a, blob_b])
     labels = AgglomerativeClusterer(distance_threshold=0.5).fit_predict(X)
     assert len(set(labels)) == 2
