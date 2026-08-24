@@ -69,8 +69,13 @@ def generate_scenario(
     voice_pool = VOICES.copy()
     rng.shuffle(voice_pool)
     for conv in range(n_conversations):
-        voices = [voice_pool[(conv * speakers_per_thread + k) % len(voice_pool)] for k in range(speakers_per_thread)]
-        speakers = [f"speaker_{conv + 1:02d}_{chr(65 + k)}" for k in range(speakers_per_thread)]
+        voices = [
+            voice_pool[(conv * speakers_per_thread + k) % len(voice_pool)]
+            for k in range(speakers_per_thread)
+        ]
+        speakers = [
+            f"speaker_{conv + 1:02d}_{chr(65 + k)}" for k in range(speakers_per_thread)
+        ]
         bank = TOPIC_BANKS[conv % len(TOPIC_BANKS)]
         n = rng.integers(n_lines[0], n_lines[1] + 1)
         lines = []
@@ -94,5 +99,7 @@ def generate_scenario(
     return threads
 
 
-def thread_to_conversation(thread: ScenarioThread, utterances: list[Utterance], conv_id: str) -> Conversation:
+def thread_to_conversation(
+    thread: ScenarioThread, utterances: list[Utterance], conv_id: str
+) -> Conversation:
     return Conversation(id=conv_id, participants=list(thread.speakers), utterances=utterances)

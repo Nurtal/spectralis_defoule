@@ -5,7 +5,7 @@ from scipy.signal import butter, sosfilt
 def place(clips: list[tuple[float, np.ndarray]], length: int) -> np.ndarray:
     mix = np.zeros(length, dtype=np.float64)
     for start_sec, audio in clips:
-        i0 = int(round(start_sec * 16000))
+        i0 = round(start_sec * 16000)
         i1 = min(length, i0 + len(audio))
         if i1 > i0:
             mix[i0:i1] += audio[: i1 - i0]

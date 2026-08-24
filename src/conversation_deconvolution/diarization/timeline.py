@@ -5,11 +5,7 @@ def merge_turns(turns: list[SpeakerTurn], gap: float = 0.2) -> list[SpeakerTurn]
     ordered = sorted(turns, key=lambda t: (t.start, t.end))
     merged: list[SpeakerTurn] = []
     for t in ordered:
-        if (
-            merged
-            and merged[-1].speaker == t.speaker
-            and t.start - merged[-1].end <= gap
-        ):
+        if merged and merged[-1].speaker == t.speaker and t.start - merged[-1].end <= gap:
             last = merged[-1]
             merged[-1] = SpeakerTurn(last.speaker, last.start, max(last.end, t.end))
         else:
@@ -25,7 +21,6 @@ def overlap_regions(turns: list[SpeakerTurn], min_duration: float = 0.05) -> lis
     events.sort(key=lambda e: (e[0], e[1]))
     active: dict[str, int] = {}
     overlaps: list[Segment] = []
-    open_start: float | None = None
     prev_t: float | None = None
     for time, kind, speaker in events:
         if prev_t is not None and time > prev_t and len(active) >= 2:

@@ -51,7 +51,11 @@ class HeuristicReconstructor:
                 if u.speaker and u.speaker not in participants:
                     participants.append(u.speaker)
             conversations.append(
-                Conversation(id=f"conversation_{rank:02d}", participants=participants, utterances=list(members))
+                Conversation(
+                    id=f"conversation_{rank:02d}",
+                    participants=participants,
+                    utterances=list(members),
+                )
             )
         return conversations
 
@@ -72,7 +76,7 @@ class HeuristicReconstructor:
         )
 
     @staticmethod
-    def _normalize(embeddings) :
+    def _normalize(embeddings):
         embeddings = np.asarray(embeddings, dtype=np.float64)
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
         norms[norms == 0] = 1.0

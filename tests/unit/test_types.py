@@ -1,6 +1,3 @@
-import numpy as np
-import pytest
-
 from conversation_deconvolution.core.types import (
     Conversation,
     Segment,

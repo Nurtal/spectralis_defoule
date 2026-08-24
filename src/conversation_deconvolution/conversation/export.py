@@ -4,7 +4,6 @@ from pathlib import Path
 import numpy as np
 
 from conversation_deconvolution.core.types import (
-    Segment,
     TranscriptResult,
     result_to_dict,
 )

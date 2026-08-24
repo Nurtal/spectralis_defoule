@@ -35,18 +35,15 @@ def match_by_iou(gt: list, pred: list, min_iou: float = 0.3) -> list[tuple]:
         for j, p in enumerate(pred):
             scores[i, j] = iou(g, p)
     rows, cols = linear_sum_assignment(-scores)
-    return [
-        (gt[r], pred[c])
-        for r, c in zip(rows, cols)
-        if scores[r, c] >= min_iou
-    ]
+    return [(gt[r], pred[c]) for r, c in zip(rows, cols) if scores[r, c] >= min_iou]
 
 
 def wer_report(pairs: list[tuple[str, str]]) -> dict:
     refs = [r for r, _ in pairs]
     hyps = [h for _, h in pairs]
     out = jiwer.process_words(
-        refs, hyps,
+        refs,
+        hyps,
         reference_transform=jiwer.wer_default,
         hypothesis_transform=jiwer.wer_default,
     )

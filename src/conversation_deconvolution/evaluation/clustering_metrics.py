@@ -3,7 +3,6 @@ from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
 
 def labels_from_conversations(conversations, keys: list[str]) -> np.ndarray:
-    conv_index: dict[str, int] = {}
     labels = np.full(len(keys), -1, dtype=int)
     lookup = {}
     for idx, c in enumerate(conversations):

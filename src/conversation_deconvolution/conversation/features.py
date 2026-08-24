@@ -18,7 +18,9 @@ def temporal_score(a: Utterance, b: Utterance, tau: float) -> float:
 
 
 def candidate_pairs(utterances: list[Utterance], max_gap: float) -> list[tuple[int, int]]:
-    ordered = sorted(range(len(utterances)), key=lambda i: (utterances[i].start, utterances[i].end))
+    ordered = sorted(
+        range(len(utterances)), key=lambda i: (utterances[i].start, utterances[i].end)
+    )
     pairs = []
     for pos, i in enumerate(ordered):
         for j_pos in range(pos + 1, len(ordered)):

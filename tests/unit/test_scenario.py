@@ -1,12 +1,15 @@
 import numpy as np
 
-from conversation_deconvolution.core.types import Utterance
 from conversation_deconvolution.synthetic.scenario import generate_scenario
 
 
 def test_scenario_deterministic_with_seed():
-    s1 = generate_scenario(n_conversations=2, speakers_per_thread=2, n_lines=(4, 6), rng=np.random.default_rng(42))
-    s2 = generate_scenario(n_conversations=2, speakers_per_thread=2, n_lines=(4, 6), rng=np.random.default_rng(42))
+    s1 = generate_scenario(
+        n_conversations=2, speakers_per_thread=2, n_lines=(4, 6), rng=np.random.default_rng(42)
+    )
+    s2 = generate_scenario(
+        n_conversations=2, speakers_per_thread=2, n_lines=(4, 6), rng=np.random.default_rng(42)
+    )
     assert [l.text for t in s1 for l in t.lines] == [l.text for t in s2 for l in t.lines]
     assert [g for t in s1 for g in t.gaps] == [g for t in s2 for g in t.gaps]
 

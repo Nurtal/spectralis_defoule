@@ -22,7 +22,7 @@ class DerResult:
 
 
 def _grid(start: float, end: float, step: float) -> np.ndarray:
-    n = max(1, int(round((end - start) / step)))
+    n = max(1, round((end - start) / step))
     return start + (np.arange(n) + 0.5) * step
 
 

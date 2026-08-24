@@ -46,6 +46,9 @@ explicit = true
 line-length = 95
 src = ["src", "tests"]
 
+[tool.ruff.lint]
+ignore = ["B008", "TRY004"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
 markers = ["slow: tests lourds nécessitant modèles et réseau"]

@@ -1,7 +1,6 @@
 import hashlib
 
 import numpy as np
-import pytest
 
 from conversation_deconvolution.conversation.reconstructor import HeuristicReconstructor
 from conversation_deconvolution.core.config import ReconstructionConfig
@@ -55,7 +54,9 @@ def test_single_conversation():
         U("u1", "A", 0.0, 1.5, "tu viens au cafe demain"),
         U("u2", "B", 1.8, 3.0, "oui je viens au cafe demain"),
     ]
-    convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), ReconstructionConfig()).reconstruct(utts)
+    convs = HeuristicReconstructor(
+        TopicTextEmbedder(TOPICS), ReconstructionConfig()
+    ).reconstruct(utts)
     assert len(convs) == 1
     assert convs[0].id == "conversation_01"
     assert convs[0].participants == ["A", "B"]
@@ -85,5 +86,7 @@ def test_full_overlap_never_linked():
         U("x1", "A", 0.0, 2.0, "meme sujet identique ici"),
         U("x2", "B", 0.1, 2.0, "meme sujet identique la"),
     ]
-    convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), ReconstructionConfig()).reconstruct(utts)
+    convs = HeuristicReconstructor(
+        TopicTextEmbedder(TOPICS), ReconstructionConfig()
+    ).reconstruct(utts)
     assert len(convs) == 2

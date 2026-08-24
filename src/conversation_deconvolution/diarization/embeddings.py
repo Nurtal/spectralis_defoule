@@ -8,7 +8,6 @@ class EcapaEmbedder:
 
     def _ensure_encoder(self):
         if self._encoder is None:
-            import torch
             from speechbrain.inference.speaker import EncoderClassifier
 
             self._encoder = EncoderClassifier.from_hparams(
@@ -33,9 +32,6 @@ class EcapaEmbedder:
 def _torch_cuda_available(device: str) -> bool:
     if device != "cuda":
         return False
-    try:
-        import torch
+    import torch
 
-        return torch.cuda.is_available()
-    except Exception:
-        return False
+    return bool(torch.cuda.is_available())

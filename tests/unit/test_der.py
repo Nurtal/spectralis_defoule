@@ -1,7 +1,7 @@
 import pytest
 
 from conversation_deconvolution.core.types import SpeakerTurn
-from conversation_deconvolution.evaluation.der import DerResult, diarization_error_rate
+from conversation_deconvolution.evaluation.der import diarization_error_rate
 
 
 def test_identical_turns_zero_der():

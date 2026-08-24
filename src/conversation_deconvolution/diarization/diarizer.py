@@ -1,6 +1,5 @@
 import numpy as np
 
-from conversation_deconvolution.audio.vad import SileroVad
 from conversation_deconvolution.core.types import SpeakerTurn
 from conversation_deconvolution.diarization.timeline import merge_turns
 

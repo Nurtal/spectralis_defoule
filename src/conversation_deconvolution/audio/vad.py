@@ -1,7 +1,7 @@
 import numpy as np
 
-from conversation_deconvolution.core.types import Segment, VadResult
 from conversation_deconvolution.core.config import VadConfig
+from conversation_deconvolution.core.types import Segment, VadResult
 
 
 class SileroVad:
@@ -34,9 +34,7 @@ class SileroVad:
             min_silence_duration_ms=self.cfg.min_silence_ms,
             threshold=self.cfg.threshold,
         )
-        segments = [
-            Segment(s["start"] / 16000.0, s["end"] / 16000.0) for s in stamps
-        ]
+        segments = [Segment(s["start"] / 16000.0, s["end"] / 16000.0) for s in stamps]
         probs = self.frame_probs(audio)
         return VadResult(segments=segments, frame_probs=probs, frame_rate=self.frame_rate)
 

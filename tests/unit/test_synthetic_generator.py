@@ -19,8 +19,12 @@ class FakeTts:
 
 def test_generator_produces_dataset(tmp_path):
     tts = FakeTts()
-    gen = SyntheticGenerator(tts, SyntheticConfig(sample_rate=16000, snr_db=12.0, mean_gap_sec=0.5))
-    out = gen.generate(tmp_path / "ds", seed=11, n_conversations=2, speakers_per_thread=2, n_lines=(3, 5))
+    gen = SyntheticGenerator(
+        tts, SyntheticConfig(sample_rate=16000, snr_db=12.0, mean_gap_sec=0.5)
+    )
+    out = gen.generate(
+        tmp_path / "ds", seed=11, n_conversations=2, speakers_per_thread=2, n_lines=(3, 5)
+    )
     assert (out / "mixed.wav").exists()
     gt = export_mod.load_json(out / "ground_truth.json")
     assert len(gt["conversations"]) == 2
