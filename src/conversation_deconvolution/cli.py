@@ -136,7 +136,7 @@ def evaluate_results(ref, hyp) -> dict:
         if keys
         else {"pairwise_f1": 0.0, "ari": 0.0, "nmi": 0.0}
     )
-    return {
+    out = {
         "DER": der_res.der,
         "WER (non-overlap)": wer_metrics["wer"],
         "pairwise_F1": conv_metrics["pairwise_f1"],
@@ -144,6 +144,9 @@ def evaluate_results(ref, hyp) -> dict:
         "NMI": conv_metrics["nmi"],
         "matched utterances": float(len(matched)),
     }
+    if wer_overlap is not None:
+        out["WER (overlap)"] = wer_overlap
+    return out
 
 
 def turns_of(result):

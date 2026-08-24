@@ -28,10 +28,10 @@ Principe directeur : baseline fonctionnelle → mesure → bottleneck → améli
 
 **Livrables**
 
-- [ ] Chargement audio mono 16 kHz float32.
-- [ ] VAD Silero avec probabilités frame-level.
-- [ ] ASR faster-whisper GPU par segment.
-- [ ] Export JSON horodaté + timeline PNG.
+- [x] Chargement audio mono 16 kHz float32.
+- [x] VAD Silero avec probabilités frame-level.
+- [x] ASR faster-whisper GPU par segment.
+- [x] Export JSON horodaté + timeline PNG.
 
 **Acceptation :** `deconvolute run meeting.wav -o out.json` produit une
 transcription horodatée exploitable sur un fichier réel.
@@ -42,10 +42,10 @@ transcription horodatée exploitable sur un fichier réel.
 
 **Livrables**
 
-- [ ] Embeddings locuteur ECAPA-TDNN par segment speech.
-- [ ] Clustering agglomératif cosine (k auto ou `--num-speakers`).
-- [ ] Timeline locuteurs fusionnée + utterances attribuées (IoU).
-- [ ] DER calculé contre vérité terrain.
+- [x] Embeddings locuteur ECAPA-TDNN par segment speech.
+- [x] Clustering agglomératif cosine (k auto ou `--num-speakers`).
+- [x] Timeline locuteurs fusionnée + utterances attribuées (IoU).
+- [x] DER calculé contre vérité terrain.
 
 **Acceptation :** `timestamp + speaker + text` par énoncé ; DER mesuré
 sur dataset synthétique.
@@ -56,9 +56,9 @@ sur dataset synthétique.
 
 **Livrables**
 
-- [ ] Détection des zones ≥2 locuteurs simultanés (balayage timeline).
-- [ ] Interface `Separator` + baseline passthrough.
-- [ ] Rapport WER overlap vs non-overlap (chiffrer le problème avant
+- [x] Détection des zones ≥2 locuteurs simultanés (balayage timeline).
+- [x] Interface `Separator` + baseline passthrough.
+- [x] Rapport WER overlap vs non-overlap (chiffrer le problème avant
       d'intégrer un vrai modèle de séparation).
 
 **Acceptation :** les zones de chevauchement sont identifiées et leur coût
@@ -70,10 +70,10 @@ WER est quantifié dans le rapport de benchmark.
 
 **Livrables**
 
-- [ ] Features de relation entre paires d'énoncés (gap, alternance,
+- [x] Features de relation entre paires d'énoncés (gap, alternance,
       similarité sémantique multilingue).
-- [ ] Scoring + chaînage glouton + union-find → conversations.
-- [ ] Évaluation pairwise-F1 / ARI / NMI contre GT.
+- [x] Scoring + chaînage glouton + union-find → conversations.
+- [x] Évaluation pairwise-F1 / ARI / NMI contre GT.
 
 **Acceptation :** sur datasets synthétiques à ≥2 conversations parallèles,
 la reconstruction regroupe significativement mieux que le hasard
@@ -85,10 +85,10 @@ la reconstruction regroupe significativement mieux que le hasard
 
 **Livrables**
 
-- [ ] Générateur seedé : conversations parallèles, voix Piper FR distinctes,
+- [x] Générateur seedé : conversations parallèles, voix Piper FR distinctes,
       SNR, gains, taux d'overlap contrôlés.
-- [ ] Vérité terrain complète (conversations, locuteurs, timings, textes).
-- [ ] Commande `deconvolute benchmark` : N datasets → pipeline → rapport
+- [x] Vérité terrain complète (conversations, locuteurs, timings, textes).
+- [x] Commande `deconvolute benchmark` : N datasets → pipeline → rapport
       Markdown agrégé.
 
 **Acceptation :** `make benchmark` régénère données + métriques de façon
@@ -118,8 +118,8 @@ conversations, correction manuelle des associations, export.
 | Jalon | Statut |
 |---|---|
 | M0 | ✅ fait |
-| M1 | 🔄 en cours |
-| M2 | ⏳ |
-| M3 | ⏳ |
-| M4 | ⏳ |
-| M5 | ⏳ |
+| M1 | ✅ fait |
+| M2 | ✅ fait (DER 26,8 % sur sample synthétique) |
+| M3 | ✅ fait (overlap détecté + WER overlap/non-overlap ; séparation conditionnelle reportée — ADR-0004) |
+| M4 | ✅ fait (baseline heuristique + pairwise-F1/ARI/NMI) |
+| M5 | ✅ fait (`deconvolute benchmark`) |

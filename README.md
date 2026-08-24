@@ -701,12 +701,35 @@ conversation-deconvolution/
 
 ------------------------------------------------------------------------
 
+# 🚀 Quickstart
+
+``` bash
+# installation (Python 3.12 + uv, GPU CUDA recommandé)
+uv sync
+
+# générer un dataset synthétique (2 conversations × 2 locuteurs, ~20 s)
+uv run deconvolute synth --out data/synthetic/sample --seed 0
+
+# lancer le pipeline complet sur un audio
+uv run deconvolute run data/synthetic/sample/mixed.wav \
+    -o out.json -n 4 -p timeline.png
+
+# évaluer une prédiction contre la vérité terrain
+uv run deconvolute evaluate -p out.json -g data/synthetic/sample/ground_truth.json
+
+# benchmark complet (N datasets seedés → rapport Markdown)
+make benchmark
+```
+
+Structure détaillée : `docs/superpowers/specs/` (design), `docs/adr/`
+(décisions), `docs/ROADMAP.md` (jalons), `docs/superpowers/plans/`
+(plan d'implémentation).
+
 # 📌 Statut
 
 **Projet :** expérimental / R&D
 
-**Phase actuelle :** Phase 0 --- Architecture & cadrage
+**Phase actuelle :** Phases 0→5 implémentées (baseline mesurable)
 
-**Prochaine étape :** construire une première baseline audio →
-diarisation → transcription, puis introduire progressivement l'overlap
-et la reconstruction des conversations.
+**Prochaine étape :** benchmark à l'échelle, calibration des seuils,
+puis phase 6 (graphe de conversations).

@@ -1,3 +1,4 @@
+import hashlib
 import io
 import wave
 from pathlib import Path
@@ -7,7 +8,7 @@ from huggingface_hub import hf_hub_download
 from scipy.signal import resample_poly
 
 REPO = "rhasspy/piper-voices"
-QUALITY = {"gilles": "low"}
+QUALITY = {"gilles": "low", "mls_1840": "low"}
 DEFAULT_QUALITY = "medium"
 
 
@@ -16,19 +17,29 @@ class PiperTts:
         self.cache_dir = Path(cache_dir)
         self.use_cuda = use_cuda
         self._voices: dict[str, object] = {}
+        self.sample_cache = self.cache_dir / "samples"
+        self.sample_cache.mkdir(parents=True, exist_ok=True)
 
     def synthesize(self, text: str, voice_name: str) -> tuple[np.ndarray, int]:
+        key = hashlib.md5(f"{voice_name}|{text}".encode()).hexdigest()
+        cache_path = self.sample_cache / f"{key}.npy"
+        if cache_path.exists():
+            return np.load(cache_path), 16000
+        audio, sr = self._synthesize_raw(text, voice_name)
+        np.save(cache_path, _resample_16k(audio, sr))
+        return np.load(cache_path), 16000
+
+    def _synthesize_raw(self, text: str, voice_name: str) -> tuple[np.ndarray, int]:
         voice = self._ensure_voice(voice_name)
         buf = io.BytesIO()
         with wave.open(buf, "wb") as wav_file:
             voice.synthesize_wav(text, wav_file)
-        rate = wav_file.getframerate()
+            rate = wav_file.getframerate()
         buf.seek(0)
         with wave.open(buf, "rb") as wav_file:
             raw = wav_file.readframes(wav_file.getnframes())
             rate = wav_file.getframerate()
-        audio = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
-        return _resample_16k(audio, rate), 16000
+        return np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0, rate
 
     def _ensure_voice(self, name: str):
         if name not in self._voices:
