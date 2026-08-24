@@ -1,3 +1,5 @@
+import typing
+
 import numpy as np
 
 from conversation_deconvolution.core.config import PipelineConfig
@@ -135,3 +137,34 @@ def test_no_embedder_falls_back_to_mix():
     result = pipeline.run(mix)
     assert len(result.utterances) == 2
     assert all(u.text == "high" for u in result.utterances)
+
+
+def test_diarizer_reported_overlaps_reach_separator():
+    from conversation_deconvolution.conversation.reconstructor import HeuristicReconstructor
+    from conversation_deconvolution.core.config import ReconstructionConfig
+    from conversation_deconvolution.pipeline import DeconvolutionPipeline
+
+    class AwareDiarizer(FakeDiarizer):
+        overlap_regions_: typing.ClassVar = [Segment(1.0, 2.0)]
+
+    class CapturingSeparator(LoudSeparator):
+        def __init__(self):
+            self.seen = None
+
+        def separate(self, mix_, regions):
+            self.seen = list(regions)
+            return super().separate(mix_, regions)
+
+    sep = CapturingSeparator()
+    asr = RecordingAsr()
+    pipeline = DeconvolutionPipeline(
+        diarizer=AwareDiarizer(),
+        separator=sep,
+        asr=asr,
+        reconstructor=HeuristicReconstructor(_NullEmbedder(), ReconstructionConfig()),
+        config=_cfg(),
+        stem_embedder=BandEmbedder(),
+    )
+    result = pipeline.run(np.zeros(3 * SR, dtype=np.float32))
+    assert sep.seen == [Segment(1.0, 2.0)]
+    assert result.overlaps == [Segment(1.0, 2.0)]

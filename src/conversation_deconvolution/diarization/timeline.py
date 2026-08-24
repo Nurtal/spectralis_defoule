@@ -185,3 +185,18 @@ def margin_regions(
                 regions.append(Segment(seg_start, seg_end))
             start = None
     return regions
+
+
+def merge_segments(segments: list[Segment], gap: float = 0.1) -> list[Segment]:
+    if not segments:
+        return []
+    ordered = sorted(segments, key=lambda s: (s.start, s.end))
+    merged = [ordered[0]]
+    for seg in ordered[1:]:
+        last = merged[-1]
+        if seg.start <= last.end + gap:
+            if seg.end > last.end:
+                merged[-1] = Segment(last.start, seg.end)
+        else:
+            merged.append(seg)
+    return merged

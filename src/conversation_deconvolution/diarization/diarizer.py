@@ -3,7 +3,10 @@ import numpy as np
 from conversation_deconvolution.core.types import SpeakerTurn
 from conversation_deconvolution.diarization.timeline import (
     make_windows,
+    margin_regions,
+    merge_segments,
     merge_turns,
+    overlap_regions,
     windows_to_turns,
 )
 
@@ -38,4 +41,8 @@ class SpeakerDiarizer:
         turns = [
             SpeakerTurn(f"SPEAKER_{lab:02d}", start, end) for lab, start, end in runs
         ]
+        self.overlap_regions_ = merge_segments(
+            margin_regions(windows, [int(l) for l in labels])
+            + overlap_regions(turns)
+        )
         return merge_turns(turns, gap=self.cfg.hop_sec / 2), embeddings

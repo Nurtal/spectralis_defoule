@@ -98,7 +98,9 @@ class DeconvolutionPipeline:
 
         audio = np.asarray(audio, dtype=np.float32)
         turns, _embeddings = self.diarizer.diarize(audio)
-        overlaps = overlap_regions(turns)
+        overlaps = getattr(self.diarizer, "overlap_regions_", None)
+        if overlaps is None:
+            overlaps = overlap_regions(turns)
         sep_result = self.separator.separate(audio, overlaps)
         mix = sep_result.mix
 
