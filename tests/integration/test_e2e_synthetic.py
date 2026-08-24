@@ -95,15 +95,15 @@ def test_sepformer_separates_overlap_region(tmp_path):
     from conversation_deconvolution.diarization.clusterer import AgglomerativeClusterer
     from conversation_deconvolution.diarization.diarizer import SpeakerDiarizer
     from conversation_deconvolution.diarization.embeddings import EcapaEmbedder
-    from conversation_deconvolution.diarization.timeline import overlap_regions
 
-    turns, _ = SpeakerDiarizer(
+    diarizer = SpeakerDiarizer(
         SileroVad(VadConfig()),
         EcapaEmbedder(),
         AgglomerativeClusterer(),
         DiarizationConfig(num_speakers=2),
-    ).diarize(audio)
-    regions = overlap_regions(turns)
+    )
+    turns, _ = diarizer.diarize(audio)
+    regions = getattr(diarizer, "overlap_regions_", [])
     assert regions, "expected at least one overlap region"
 
     sep = SepformerSeparator(SeparationConfig())

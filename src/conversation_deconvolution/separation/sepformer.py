@@ -16,7 +16,7 @@ class SepformerSeparator:
             device = (self.cfg.device if self.cfg and self.cfg.device else None) or (
                 "cuda" if torch.cuda.is_available() else "cpu"
             )
-            name = self.cfg.model_name if self.cfg else "speechbrain/sepformer-wsj02m"
+            name = self.cfg.model_name if self.cfg else "speechbrain/sepformer-whamr16k"
             savedir = f"models/{name.split('/')[-1]}"
             self._model = SepformerSeparation.from_hparams(
                 source=name, savedir=savedir, run_opts={"device": device}
