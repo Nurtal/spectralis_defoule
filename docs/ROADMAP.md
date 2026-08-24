@@ -1,0 +1,125 @@
+# ROADMAP — Conversation Deconvolution
+
+Feuille de route opérationnelle dérivée du README (phases 0→8).
+Les jalons M0→M5 sont le périmètre courant ; M6→M8 sont la perspective.
+
+Chaque jalon a des **livrables** et un **critère d'acceptation** mesurable.
+Principe directeur : baseline fonctionnelle → mesure → bottleneck → amélioration.
+
+---
+
+## M0 — Architecture & cadrage *(README Phase 0)*
+
+**Livrables**
+
+- [x] Repository initialisé, structure `src/`, `tests/`, `configs/`, `data/`, `docs/`.
+- [x] ADR 0001→0007 (python/uv, diarisation DIY, ASR, séparation, reconstruction,
+      données synthétiques, évaluation).
+- [x] Formats `Utterance` / `Conversation` figés dans `core/types.py`
+      (schéma JSON identique côté pipeline et vérité terrain).
+- [x] Métriques définies : VAD F1 · DER · WER · pairwise-F1 / ARI / NMI.
+- [x] Config YAML versionnée (`configs/default.yaml`) + seeds reproductibles.
+
+**Acceptation :** `uv sync && make lint test` verts sur un checkout neuf.
+
+---
+
+## M1 — Baseline audio → transcription *(Phase 1)*
+
+**Livrables**
+
+- [ ] Chargement audio mono 16 kHz float32.
+- [ ] VAD Silero avec probabilités frame-level.
+- [ ] ASR faster-whisper GPU par segment.
+- [ ] Export JSON horodaté + timeline PNG.
+
+**Acceptation :** `deconvolute run meeting.wav -o out.json` produit une
+transcription horodatée exploitable sur un fichier réel.
+
+---
+
+## M2 — Diarisation *(Phase 2)*
+
+**Livrables**
+
+- [ ] Embeddings locuteur ECAPA-TDNN par segment speech.
+- [ ] Clustering agglomératif cosine (k auto ou `--num-speakers`).
+- [ ] Timeline locuteurs fusionnée + utterances attribuées (IoU).
+- [ ] DER calculé contre vérité terrain.
+
+**Acceptation :** `timestamp + speaker + text` par énoncé ; DER mesuré
+sur dataset synthétique.
+
+---
+
+## M3 — Overlap & séparation *(Phase 3)*
+
+**Livrables**
+
+- [ ] Détection des zones ≥2 locuteurs simultanés (balayage timeline).
+- [ ] Interface `Separator` + baseline passthrough.
+- [ ] Rapport WER overlap vs non-overlap (chiffrer le problème avant
+      d'intégrer un vrai modèle de séparation).
+
+**Acceptation :** les zones de chevauchement sont identifiées et leur coût
+WER est quantifié dans le rapport de benchmark.
+
+---
+
+## M4 — Reconstruction des conversations *(Phase 4)*
+
+**Livrables**
+
+- [ ] Features de relation entre paires d'énoncés (gap, alternance,
+      similarité sémantique multilingue).
+- [ ] Scoring + chaînage glouton + union-find → conversations.
+- [ ] Évaluation pairwise-F1 / ARI / NMI contre GT.
+
+**Acceptation :** sur datasets synthétiques à ≥2 conversations parallèles,
+la reconstruction regroupe significativement mieux que le hasard
+(pairwise-F1 > baseline aléatoire documentée).
+
+---
+
+## M5 — Dataset synthétique & benchmark *(Phase 5)*
+
+**Livrables**
+
+- [ ] Générateur seedé : conversations parallèles, voix Piper FR distinctes,
+      SNR, gains, taux d'overlap contrôlés.
+- [ ] Vérité terrain complète (conversations, locuteurs, timings, textes).
+- [ ] Commande `deconvolute benchmark` : N datasets → pipeline → rapport
+      Markdown agrégé.
+
+**Acceptation :** `make benchmark` régénère données + métriques de façon
+reproductible (même seed ⇒ mêmes chiffres).
+
+---
+
+## M6 — Graphe de conversations *(Phase 6, outlook)*
+
+Nœuds = utterances, arêtes scorées ; features enrichies (prosodie, position)
+; community detection puis GNN si nécessaire ; comparaison aux baselines M4.
+
+## M7 — Robustesse *(Phase 7, outlook)*
+
+Bruit réaliste, réverbération (RIR), interruptions intra-conversation,
+locuteurs proches/éloignés, longues durées, sujets changeants.
+
+## M8 — Démonstrateur *(Phase 8, outlook)*
+
+Upload audio, timeline interactive, visualisation des chevauchements et des
+conversations, correction manuelle des associations, export.
+
+---
+
+## État
+
+| Jalon | Statut |
+|---|---|
+| M0 | ✅ fait |
+| M1 | 🔄 en cours |
+| M2 | ⏳ |
+| M3 | ⏳ |
+| M4 | ⏳ |
+| M5 | ⏳ |
