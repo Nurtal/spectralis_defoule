@@ -50,7 +50,7 @@ class LoudSeparator:
 
 
 class BandEmbedder:
-    """Embeds a 1-D signal with its RMS so tones of different amplitude separate."""
+    """Embeds a 1-D signal with power stats so amplitudes separate."""
 
     dim = 8
 
@@ -59,7 +59,8 @@ class BandEmbedder:
         for x in signals:
             x = np.asarray(x, dtype=np.float64)
             v = np.zeros(self.dim)
-            v[0] = float(np.sqrt(np.mean(x**2)))
+            v[0] = float(np.mean(x * x))
+            v[1] = float(np.mean(x**4))
             n = np.linalg.norm(v) or 1.0
             out.append(v / n)
         return np.array(out)

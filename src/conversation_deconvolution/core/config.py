@@ -28,6 +28,8 @@ class SeparationConfig:
     device: str | None = None
     min_region_sec: float = 0.4
     pad_sec: float = 0.25
+    assign_min_sim: float = 0.35
+    assign_min_margin: float = 0.03
 
 
 @dataclass

@@ -60,11 +60,9 @@ class DeconvolutionPipeline:
             return chunk
         chunk_start = chunk_start_idx / sr
         chunk_end = chunk_start + len(chunk) / sr
-        ref_key = (turn.speaker, turn.start, turn.end)
-        if ref_key not in cache["refs"]:
-            ref = self._exclusive_ref(turn, sep_result.mix, sep_result.regions)
-            cache["refs"][ref_key] = self._unit(self._embed([ref])[0])
-        ref_emb = cache["refs"][ref_key]
+        ref_emb = self._turn_reference(turn, sep_result, cache)
+        if ref_emb is None:
+            return chunk
         enhanced = chunk.copy()
         for region in sep_result.regions:
             rs = max(region.segment.start, chunk_start)
@@ -74,13 +72,35 @@ class DeconvolutionPipeline:
             key = id(region)
             if key not in cache["stem_embs"]:
                 cache["stem_embs"][key] = [self._unit(v) for v in self._embed(region.stems)]
-            scores = [float(np.dot(ref_emb, se)) for se in cache["stem_embs"][key]]
-            best = int(np.argmax(scores))
+            sims = [float(np.dot(ref_emb, se)) for se in cache["stem_embs"][key]]
+            order = np.argsort(sims)[::-1]
+            best = int(order[0])
+            if sims[best] < self.cfg.separation.assign_min_sim:
+                continue
+            if len(sims) > 1 and sims[best] - float(sims[order[1]]) < self.cfg.separation.assign_min_margin:
+                continue
             n = int((re_ - rs) * sr)
             stem = self._fit(region.stems[best], n)
             start_off = int(rs * sr) - chunk_start_idx
             enhanced[start_off : start_off + n] = stem
         return enhanced
+
+    def _turn_reference(self, turn, sep_result, cache):
+        centroids = getattr(self.diarizer, "speaker_centroids_", None)
+        if centroids and turn.speaker:
+            try:
+                lab = int(turn.speaker.rsplit("_", 1)[-1])
+            except ValueError:
+                lab = None
+            if lab is not None and lab in centroids:
+                return centroids[lab]
+        ref_key = (turn.speaker, turn.start, turn.end)
+        if ref_key not in cache["refs"]:
+            ref = self._exclusive_ref(turn, sep_result.mix, sep_result.regions)
+            if len(ref) == 0:
+                return None
+            cache["refs"][ref_key] = self._unit(self._embed([ref])[0])
+        return cache["refs"][ref_key]
 
     @staticmethod
     def _fit(signal: np.ndarray, n: int) -> np.ndarray:

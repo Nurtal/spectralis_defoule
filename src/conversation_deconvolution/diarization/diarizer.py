@@ -45,4 +45,12 @@ class SpeakerDiarizer:
             margin_regions(windows, [int(l) for l in labels])
             + overlap_regions(turns)
         )
+        self.speaker_centroids_ = {}
+        if embeddings:
+            mat = np.vstack([np.asarray(e, dtype=np.float64) for e in embeddings])
+            for lab in sorted({int(l) for l in labels}):
+                rows = mat[[i for i, l in enumerate(labels) if int(l) == lab]]
+                c = rows.mean(axis=0)
+                norm = float(np.linalg.norm(c)) or 1.0
+                self.speaker_centroids_[lab] = c / norm
         return merge_turns(turns, gap=self.cfg.hop_sec / 2), embeddings
