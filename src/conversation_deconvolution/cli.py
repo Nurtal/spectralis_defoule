@@ -129,9 +129,7 @@ def evaluate_results(ref, hyp) -> dict:
     gt_utts = [u for c in ref.conversations for u in c.utterances]
     pred_utts = [u for c in hyp.conversations for u in c.utterances]
     non_overlap_ids = {
-        u.id
-        for u in gt_utts
-        if sum(_overlap(u, v) > 0.2 for v in gt_utts if v is not u) == 0
+        u.id for u in gt_utts if sum(_overlap(u, v) > 0.2 for v in gt_utts if v is not u) == 0
     }
     matched = match_by_iou(gt_utts, pred_utts, min_iou=0.2)
     matched_non_overlap = [(g, p) for g, p in matched if g.id in non_overlap_ids]

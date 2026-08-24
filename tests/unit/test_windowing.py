@@ -1,4 +1,3 @@
-
 import pytest
 
 from conversation_deconvolution.core.types import Segment
@@ -70,9 +69,7 @@ def test_margin_regions_detect_contested_zone():
         (2.0, 3.0),
     ]
     labels = [0, 0, 1, 1, 0, 0, 1, 0]
-    regions = margin_regions(
-        wins, labels, cell_sec=0.25, min_margin=0.34, min_duration=0.3
-    )
+    regions = margin_regions(wins, labels, cell_sec=0.25, min_margin=0.34, min_duration=0.3)
     # contradictory window pairs span [0.5, 2.5]
     assert regions == [Segment(0.5, 2.5)]
 
@@ -80,7 +77,4 @@ def test_margin_regions_detect_contested_zone():
 def test_margin_regions_clean_track_has_none():
     wins = [(i * 1.0, (i + 1) * 1.0) for i in range(4)]
     labels = [0, 0, 1, 1]
-    assert (
-        margin_regions(wins, labels, cell_sec=0.25, min_margin=0.34, min_duration=0.3)
-        == []
-    )
+    assert margin_regions(wins, labels, cell_sec=0.25, min_margin=0.34, min_duration=0.3) == []

@@ -20,9 +20,7 @@ class AgglomerativeClusterer:
         return self._auto_k(X)
 
     def _fixed(self, X: np.ndarray, k: int) -> np.ndarray:
-        model = AgglomerativeClustering(
-            n_clusters=k, metric="cosine", linkage="average"
-        )
+        model = AgglomerativeClustering(n_clusters=k, metric="cosine", linkage="average")
         return model.fit_predict(X)
 
     def _auto_k(self, X: np.ndarray) -> np.ndarray:

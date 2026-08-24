@@ -40,8 +40,7 @@ class SepformerSeparator:
             with torch.no_grad():
                 est = model.separate_batch(torch.tensor(chunk, dtype=torch.float32)[None, :])
             stems = [
-                np.asarray(est[0, :, i].cpu(), dtype=np.float32)
-                for i in range(est.shape[-1])
+                np.asarray(est[0, :, i].cpu(), dtype=np.float32) for i in range(est.shape[-1])
             ]
             stems = [self._fit(stem, len(chunk)) for stem in stems]
             separated.append(

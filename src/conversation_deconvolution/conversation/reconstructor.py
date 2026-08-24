@@ -52,7 +52,10 @@ class HeuristicReconstructor:
         conversations = []
         ranked = sorted(streams, key=lambda s: ordered[s.members[0]].start)
         for rank, st in enumerate(ranked, start=1):
-            members = [ordered[i] for i in sorted(st.members, key=lambda j: (ordered[j].start, ordered[j].end))]
+            members = [
+                ordered[i]
+                for i in sorted(st.members, key=lambda j: (ordered[j].start, ordered[j].end))
+            ]
             participants = list(dict.fromkeys(u.speaker for u in members if u.speaker))
             conversations.append(
                 Conversation(
@@ -90,9 +93,7 @@ class HeuristicReconstructor:
         if not speaker:
             return False
         others = st.speakers - {speaker}
-        return any(
-            self._speakers_conflict(speaker, other, spans) for other in others
-        )
+        return any(self._speakers_conflict(speaker, other, spans) for other in others)
 
     def _speakers_conflict(
         self,

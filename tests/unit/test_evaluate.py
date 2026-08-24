@@ -1,4 +1,3 @@
-
 from conversation_deconvolution.cli import evaluate_results
 from conversation_deconvolution.core.types import Conversation, TranscriptResult
 
@@ -34,7 +33,9 @@ def test_dense_interleaved_grouping_still_evaluated():
         overlaps=[],
         conversations=[
             _conv("k1", [U("p1", 0.0, 2.0, "bonjour ici"), U("p2", 2.5, 4.5, "a plus tard")]),
-            _conv("k2", [U("p3", 0.5, 2.5, "salut la bas"), U("p4", 3.0, 5.0, "bonne soiree")]),
+            _conv(
+                "k2", [U("p3", 0.5, 2.5, "salut la bas"), U("p4", 3.0, 5.0, "bonne soiree")]
+            ),
         ],
     )
     m = evaluate_results(ref, hyp)

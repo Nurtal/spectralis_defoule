@@ -20,15 +20,12 @@ class SpeakerDiarizer:
 
     def diarize(self, audio: np.ndarray) -> tuple[list[SpeakerTurn], list[np.ndarray]]:
         result = self.vad.detect(audio)
-        segments = [
-            s for s in result.segments if s.duration >= self.cfg.min_segment_sec
-        ]
+        segments = [s for s in result.segments if s.duration >= self.cfg.min_segment_sec]
         windows = make_windows(segments, self.cfg.window_sec, self.cfg.hop_sec)
         if not windows:
             return [], []
         embeddings = [
-            self.embedder.embed(audio[int(s * 16000) : int(e * 16000)])
-            for s, e in windows
+            self.embedder.embed(audio[int(s * 16000) : int(e * 16000)]) for s, e in windows
         ]
         labels = self.clusterer.fit_predict(
             np.array(embeddings), n_speakers=self.cfg.num_speakers
@@ -38,12 +35,9 @@ class SpeakerDiarizer:
             [int(l) for l in labels],
             min_turn_sec=self.cfg.min_turn_sec,
         )
-        turns = [
-            SpeakerTurn(f"SPEAKER_{lab:02d}", start, end) for lab, start, end in runs
-        ]
+        turns = [SpeakerTurn(f"SPEAKER_{lab:02d}", start, end) for lab, start, end in runs]
         self.overlap_regions_ = merge_segments(
-            margin_regions(windows, [int(l) for l in labels])
-            + overlap_regions(turns)
+            margin_regions(windows, [int(l) for l in labels]) + overlap_regions(turns)
         )
         self.speaker_centroids_ = {}
         if embeddings:

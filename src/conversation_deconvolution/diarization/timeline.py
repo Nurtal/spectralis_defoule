@@ -94,9 +94,7 @@ def windows_to_turns(
         absorbed[-2] = (plab, pstart, absorbed[-1][2])
         absorbed.pop()
 
-    return [
-        (lab, round(t0 + start, 4), round(t0 + end, 4)) for lab, start, end in absorbed
-    ]
+    return [(lab, round(t0 + start, 4), round(t0 + end, 4)) for lab, start, end in absorbed]
 
 
 def merge_turns(turns: list[SpeakerTurn], gap: float = 0.2) -> list[SpeakerTurn]:
