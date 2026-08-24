@@ -116,3 +116,30 @@ def test_same_speaker_beats_semantic_drift():
     convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg).reconstruct(utts)
     members = sorted(tuple(sorted(u.id for u in c.utterances)) for c in convs)
     assert any(set(m) == {"a1", "a2"} for m in members)
+
+
+def test_overlapping_voices_never_grouped():
+    # Two parallel conversations about the SAME topic: gaps, alternation
+    # and semantics invite linking; only mutual voice overlap forbids it.
+    utts = [
+        U("a1", "A", 0.0, 2.0, "tu viens au cafe demain midi"),
+        U("c1", "C", 1.8, 3.6, "je passe au cafe demain aussi"),
+        U("a2", "A", 2.5, 4.5, "parfait pour le cafe alors"),
+        U("c2", "C", 4.3, 6.0, "un cafe pour moi aussi merci"),
+    ]
+    cfg = ReconstructionConfig()
+    convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg).reconstruct(utts)
+    members = sorted(tuple(sorted(u.id for u in c.utterances)) for c in convs)
+    assert ("a1", "a2") in members and ("c1", "c2") in members
+
+
+def test_non_overlapping_alternating_voices_still_grouped():
+    utts = [
+        U("a1", "A", 0.0, 2.0, "tu viens au cafe demain midi"),
+        U("b1", "B", 2.2, 4.0, "oui je viens au cafe demain"),
+        U("a2", "A", 4.2, 6.0, "parfait pour le cafe alors"),
+    ]
+    convs = HeuristicReconstructor(
+        TopicTextEmbedder(TOPICS), ReconstructionConfig()
+    ).reconstruct(utts)
+    assert len(convs) == 1

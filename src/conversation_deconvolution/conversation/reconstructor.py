@@ -21,12 +21,18 @@ class HeuristicReconstructor:
             return []
         ordered = sorted(utterances, key=lambda u: (u.start, u.end))
         embeddings = self._normalize(self.embedder.encode([u.text for u in ordered]))
+        spans: dict[str, list[tuple[float, float]]] = {}
+        for u in ordered:
+            if u.speaker:
+                spans.setdefault(u.speaker, []).append((u.start, u.end))
         n = len(ordered)
         uf = UnionFind()
         successors: dict[int, list[tuple[float, int]]] = {}
         for i in range(n):
             candidates = []
             for j in range(i + 1, n):
+                if self._speakers_conflict(ordered[i].speaker, ordered[j].speaker, spans):
+                    continue
                 score = self._pair_score(ordered[i], ordered[j], embeddings[i], embeddings[j])
                 if score >= self.cfg.threshold:
                     candidates.append((score, j))
@@ -58,6 +64,26 @@ class HeuristicReconstructor:
                 )
             )
         return conversations
+
+    def _speakers_conflict(
+        self,
+        speaker_a: str | None,
+        speaker_b: str | None,
+        spans: dict[str, list[tuple[float, float]]],
+    ) -> bool:
+        if not speaker_a or not speaker_b or speaker_a == speaker_b:
+            return False
+        if speaker_a not in spans or speaker_b not in spans:
+            return False
+        overlap = sum(
+            max(0.0, min(e1, e2) - max(s1, s2))
+            for s1, e1 in spans[speaker_a]
+            for s2, e2 in spans[speaker_b]
+        )
+        dur_a = sum(e - s for s, e in spans[speaker_a])
+        dur_b = sum(e - s for s, e in spans[speaker_b])
+        shorter = min(dur_a, dur_b) or 1e-9
+        return overlap / shorter > self.cfg.max_speaker_overlap_ratio
 
     def _pair_score(self, a: Utterance, b: Utterance, ea, eb) -> float:
         overlap = _overlap_duration(a, b)
