@@ -20,11 +20,11 @@ def test_no_detection():
     assert m["recall"] == 0.0 and m["precision"] == 0.0
 
 
-def test_half_coverage():
+def test_partial_coverage():
     probs = np.zeros(N)
-    probs[200:400] = 0.9
-    m = vad_prf(probs, RATE, [Segment(4.0, 8.0)])
-    assert m["recall"] == pytest_approx(0.5)
+    probs[150:350] = 0.9
+    m = vad_prf(probs, RATE, [Segment(2.0, 6.0)])
+    assert m["recall"] == pytest_approx(0.75)
     assert m["precision"] == pytest_approx(0.75)
 
 
