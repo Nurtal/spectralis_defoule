@@ -1,0 +1,29 @@
+vad:
+  threshold: 0.5
+  min_speech_ms: 250
+  min_silence_ms: 100
+diarization:
+  distance_threshold: 0.75
+  min_segment_sec: 0.4
+  num_speakers: null
+asr:
+  model_size: small
+  device: cuda
+  compute_type: float16
+  language: null
+  context_pad_sec: 0.25
+reconstruction:
+  max_gap: 30.0
+  tau: 4.0
+  w_temporal: 0.5
+  w_alternation: 0.15
+  w_semantic: 0.35
+  threshold: 0.45
+  max_successors: 2
+synthetic:
+  sample_rate: 16000
+  snr_db: 15.0
+  mean_gap_sec: 0.8
+  min_words: 3
+  max_words: 14
+text_embedding_model: paraphrase-multilingual-MiniLM-L12-v2

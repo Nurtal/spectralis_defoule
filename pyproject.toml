@@ -1,0 +1,51 @@
+[project]
+name = "conversation-deconvolution"
+version = "0.1.0"
+description = "Déconvolution de conversations multi-locuteurs à partir d'un enregistrement audio unique"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "scikit-learn>=1.5",
+    "soundfile>=0.12",
+    "torch>=2.4",
+    "torchaudio>=2.4",
+    "silero-vad>=5.1",
+    "speechbrain>=1.1",
+    "faster-whisper>=1.2",
+    "sentence-transformers>=3.0",
+    "piper-tts>=1.7",
+    "jiwer>=3.0",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "rich>=13.0",
+    "matplotlib>=3.9",
+]
+
+[project.scripts]
+deconvolute = "conversation_deconvolution.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[build-system]
+requires = ["uv_build>=0.7"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu124" }]
+torchaudio = [{ index = "pytorch-cu124" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.ruff]
+line-length = 95
+src = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+markers = ["slow: tests lourds nécessitant modèles et réseau"]
