@@ -9,6 +9,14 @@ diarization:
   window_sec: 1.5
   hop_sec: 0.5
   min_turn_sec: 0.3
+separation:
+  enabled: false
+  model_name: speechbrain/sepformer-whamr16k
+  device: null
+  min_region_sec: 0.4
+  pad_sec: 0.25
+  assign_min_sim: 0.35
+  assign_min_margin: 0.03
 asr:
   model_size: small
   device: cuda

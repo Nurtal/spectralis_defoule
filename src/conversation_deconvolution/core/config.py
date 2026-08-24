@@ -86,6 +86,7 @@ class PipelineConfig:
         sections = {
             "vad": VadConfig,
             "diarization": DiarizationConfig,
+            "separation": SeparationConfig,
             "asr": AsrConfig,
             "reconstruction": ReconstructionConfig,
             "synthetic": SyntheticConfig,

@@ -28,7 +28,17 @@ class FakeVad:
         )
 
 
+def _unit(v):
+    v = np.asarray(v, dtype=np.float64)
+    return v / (float(np.linalg.norm(v)) or 1.0)
+
+
 class FakeDiarizer:
+    speaker_centroids_: typing.ClassVar = {
+        0: _unit([0.405, 0.246] + [0.0] * 6),
+        1: _unit([0.045, 0.003] + [0.0] * 6),
+    }
+
     def __init__(self):
         self.vad = FakeVad()
 
@@ -125,7 +135,9 @@ def test_no_embedder_falls_back_to_mix():
     from conversation_deconvolution.core.config import ReconstructionConfig
     from conversation_deconvolution.pipeline import DeconvolutionPipeline
 
-    mix = np.concatenate([_tone(440, 1.0, 0.9), np.zeros(SR, np.float32), _tone(880, 1.0, 0.3)])
+    mix = np.concatenate(
+        [_tone(440, 1.0, 0.9), np.zeros(SR, np.float32), _tone(880, 1.0, 0.3)]
+    )
     asr = RecordingAsr()
     pipeline = DeconvolutionPipeline(
         diarizer=FakeDiarizer(),

@@ -19,6 +19,15 @@ def test_default_loads_yaml(tmp_path):
     assert cfg.asr.model_size == "small"
 
 
+def test_separation_section_loads(tmp_path):
+    p = tmp_path / "sep.yaml"
+    p.write_text("separation:\n  enabled: true\n  assign_min_sim: 0.4\n")
+    cfg = PipelineConfig.from_yaml(p)
+    assert cfg.separation.enabled is True
+    assert cfg.separation.assign_min_sim == 0.4
+    assert cfg.separation.model_name == "speechbrain/sepformer-whamr16k"
+
+
 def test_unknown_key_raises(tmp_path):
     p = tmp_path / "bad.yaml"
     p.write_text("vad:\n  nonsense: 1\n")

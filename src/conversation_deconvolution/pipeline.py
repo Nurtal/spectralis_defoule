@@ -29,8 +29,7 @@ class DeconvolutionPipeline:
     def _exclusive_ref(self, turn, mix: np.ndarray, regions) -> np.ndarray:
         sr = 16000
         covered = [
-            (max(r.segment.start, turn.start), min(r.segment.end, turn.end))
-            for r in regions
+            (max(r.segment.start, turn.start), min(r.segment.end, turn.end)) for r in regions
         ]
         covered = [(s, e) for s, e in covered if e - s > 0]
         pieces = []
@@ -45,7 +44,8 @@ class DeconvolutionPipeline:
         if total < 0.25:
             return mix[int(turn.start * sr) : int(turn.end * sr)]
         out = np.concatenate(
-            [mix[int(s * sr) : int(e * sr)] for s, e in pieces if e > s] or [np.zeros(0, np.float32)]
+            [mix[int(s * sr) : int(e * sr)] for s, e in pieces if e > s]
+            or [np.zeros(0, np.float32)]
         )
         return out
 
@@ -54,7 +54,9 @@ class DeconvolutionPipeline:
             return list(self.stem_embedder.encode(signals))
         return [self.stem_embedder.embed(s) for s in signals]
 
-    def _enhance(self, chunk: np.ndarray, chunk_start_idx: int, turn, sep_result, cache) -> np.ndarray:
+    def _enhance(
+        self, chunk: np.ndarray, chunk_start_idx: int, turn, sep_result, cache
+    ) -> np.ndarray:
         sr = 16000
         if not sep_result.regions or self.stem_embedder is None:
             return chunk
@@ -77,7 +79,10 @@ class DeconvolutionPipeline:
             best = int(order[0])
             if sims[best] < self.cfg.separation.assign_min_sim:
                 continue
-            if len(sims) > 1 and sims[best] - float(sims[order[1]]) < self.cfg.separation.assign_min_margin:
+            if (
+                len(sims) > 1
+                and sims[best] - float(sims[order[1]]) < self.cfg.separation.assign_min_margin
+            ):
                 continue
             n = int((re_ - rs) * sr)
             stem = self._fit(region.stems[best], n)
@@ -97,9 +102,10 @@ class DeconvolutionPipeline:
         ref_key = (turn.speaker, turn.start, turn.end)
         if ref_key not in cache["refs"]:
             ref = self._exclusive_ref(turn, sep_result.mix, sep_result.regions)
-            if len(ref) == 0:
+            vec = np.asarray(self._embed([ref])[0], dtype=np.float64)
+            if len(ref) == 0 or float(np.linalg.norm(vec)) < 1e-8:
                 return None
-            cache["refs"][ref_key] = self._unit(self._embed([ref])[0])
+            cache["refs"][ref_key] = self._unit(vec)
         return cache["refs"][ref_key]
 
     @staticmethod
