@@ -102,7 +102,7 @@ def test_sepformer_separates_overlap_region(tmp_path):
         AgglomerativeClusterer(),
         DiarizationConfig(num_speakers=2),
     )
-    turns, _ = diarizer.diarize(audio)
+    _turns, _ = diarizer.diarize(audio)
     regions = getattr(diarizer, "overlap_regions_", [])
     assert regions, "expected at least one overlap region"
 

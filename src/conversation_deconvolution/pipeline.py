@@ -49,6 +49,11 @@ class DeconvolutionPipeline:
         )
         return out
 
+    def _embed(self, signals: list[np.ndarray]) -> list[np.ndarray]:
+        if hasattr(self.stem_embedder, "encode"):
+            return list(self.stem_embedder.encode(signals))
+        return [self.stem_embedder.embed(s) for s in signals]
+
     def _enhance(self, chunk: np.ndarray, chunk_start_idx: int, turn, sep_result, cache) -> np.ndarray:
         sr = 16000
         if not sep_result.regions or self.stem_embedder is None:
@@ -57,9 +62,8 @@ class DeconvolutionPipeline:
         chunk_end = chunk_start + len(chunk) / sr
         ref_key = (turn.speaker, turn.start, turn.end)
         if ref_key not in cache["refs"]:
-            cache["refs"][ref_key] = self._unit(
-                self.stem_embedder.encode([self._exclusive_ref(turn, sep_result.mix, sep_result.regions)])[0]
-            )
+            ref = self._exclusive_ref(turn, sep_result.mix, sep_result.regions)
+            cache["refs"][ref_key] = self._unit(self._embed([ref])[0])
         ref_emb = cache["refs"][ref_key]
         enhanced = chunk.copy()
         for region in sep_result.regions:
@@ -69,9 +73,7 @@ class DeconvolutionPipeline:
                 continue
             key = id(region)
             if key not in cache["stem_embs"]:
-                cache["stem_embs"][key] = [
-                    self._unit(self.stem_embedder.encode([s])[0]) for s in region.stems
-                ]
+                cache["stem_embs"][key] = [self._unit(v) for v in self._embed(region.stems)]
             scores = [float(np.dot(ref_emb, se)) for se in cache["stem_embs"][key]]
             best = int(np.argmax(scores))
             n = int((re_ - rs) * sr)
