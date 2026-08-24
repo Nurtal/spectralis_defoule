@@ -13,8 +13,6 @@ NAMES = [
     "gap_sec",
     "log1p_gap",
     "temporal_exp",
-    "alternation",
-    "same_speaker",
     "overlap_ratio",
     "semantic_cos",
     "index_distance",
@@ -30,7 +28,7 @@ class TwoTopicEmbedder:
 def write_model(path, coef_by_name, intercept):
     model = {
         "feature_names": NAMES,
-        "scaler": {"mean": [0.0] * 9, "scale": [1.0] * 9},
+        "scaler": {"mean": [0.0] * 7, "scale": [1.0] * 7},
         "coef": [coef_by_name.get(n, 0.0) for n in NAMES],
         "intercept": intercept,
         "meta": {},

@@ -15,8 +15,6 @@ NAMES = [
     "gap_sec",
     "log1p_gap",
     "temporal_exp",
-    "alternation",
-    "same_speaker",
     "overlap_ratio",
     "semantic_cos",
     "index_distance",
@@ -36,8 +34,8 @@ def test_build_reconstructor_graph(tmp_path):
 
     model = {
         "feature_names": NAMES,
-        "scaler": {"mean": [0.0] * 9, "scale": [1.0] * 9},
-        "coef": [0.0] * 9,
+        "scaler": {"mean": [0.0] * 7, "scale": [1.0] * 7},
+        "coef": [0.0] * 7,
         "intercept": 0.0,
         "meta": {},
     }

@@ -62,7 +62,7 @@ def test_labels_sampling_determinism(tmp_path):
     assert n_pos == 4
     assert n_neg == 6
     assert len(X1) == len(y1) == 10
-    assert X1.shape[1] == 9
+    assert X1.shape[1] == 7
     assert np.array_equal(y1, y2) and np.array_equal(X1, X2)
 
 
