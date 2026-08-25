@@ -6,9 +6,10 @@ diarization:
   distance_threshold: 0.75
   min_segment_sec: 0.4
   num_speakers: null
-  window_sec: 1.5
-  hop_sec: 0.5
+  window_sec: 1.0
+  hop_sec: 0.33
   min_turn_sec: 0.3
+  cell_sec: 0.125
 separation:
   enabled: false
   model_name: speechbrain/sepformer-whamr16k
@@ -21,15 +22,15 @@ asr:
   model_size: small
   device: cuda
   compute_type: float16
-  language: null
+  language: fr
   context_pad_sec: 0.0
 reconstruction:
   max_gap: 30.0
   tau: 4.0
-  w_temporal: 0.20
-  w_semantic: 0.35
-  w_same_speaker: 0.30
-  threshold: 0.5
+  w_temporal: 0.10
+  w_semantic: 0.50
+  w_same_speaker: 0.40
+  threshold: 0.4
   max_speaker_overlap_ratio: 0.05
 synthetic:
   sample_rate: 16000
