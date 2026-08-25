@@ -35,8 +35,9 @@ class FasterWhisperAsr:
         seg_iter, info = model.transcribe(
             audio,
             language=language or self.cfg.language,
-            beam_size=1,
+            beam_size=self.cfg.beam_size,
             vad_filter=False,
+            initial_prompt=self.cfg.initial_prompt,
         )
         texts = []
         logprobs = []

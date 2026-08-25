@@ -39,6 +39,8 @@ class AsrConfig:
     compute_type: str = "float16"
     language: str | None = None
     context_pad_sec: float = 0.0
+    beam_size: int = 1
+    initial_prompt: str | None = None
 
 
 @dataclass

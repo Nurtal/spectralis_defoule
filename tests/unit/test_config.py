@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from conversation_deconvolution.core.config import PipelineConfig
@@ -60,3 +61,38 @@ def test_repo_default_yaml_loads():
     cfg = PipelineConfig.from_yaml(root / "configs" / "default.yaml")
     assert cfg.asr.device == "cuda"
     assert cfg.synthetic.sample_rate == 16000
+
+
+def test_asr_beam_and_prompt_defaults():
+    cfg = PipelineConfig.default()
+    assert cfg.asr.beam_size == 1
+    assert cfg.asr.initial_prompt is None
+
+
+def test_asr_beam_and_prompt_from_yaml(tmp_path):
+    p = tmp_path / "asr.yaml"
+    p.write_text(
+        "asr:\n  beam_size: 8\n  initial_prompt: 'Conversation technique en francais.'\n"
+    )
+    cfg = PipelineConfig.from_yaml(p)
+    assert cfg.asr.beam_size == 8
+    assert cfg.asr.initial_prompt == "Conversation technique en francais."
+
+
+def test_faster_whisper_asr_passes_beam_and_prompt(monkeypatch):
+    from conversation_deconvolution.asr.faster_whisper_asr import FasterWhisperAsr
+    from conversation_deconvolution.core.config import AsrConfig
+
+    captured = {}
+
+    class FakeModel:
+        def transcribe(self, audio, **kwargs):
+            captured.update(kwargs)
+            return iter([]), type("Info", (), {"language": "fr"})()
+
+    cfg = AsrConfig(beam_size=7, initial_prompt="test prompt")
+    asr = FasterWhisperAsr(cfg)
+    asr._model = FakeModel()
+    asr.transcribe(np.zeros(16000, dtype=np.float32))
+    assert captured["beam_size"] == 7
+    assert captured["initial_prompt"] == "test prompt"
