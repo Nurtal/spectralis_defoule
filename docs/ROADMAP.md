@@ -132,9 +132,9 @@ conversations, correction manuelle des associations, export.
 |---|---|
 | M0 | ✅ fait |
 | M1 | ✅ fait |
-| M2 | ✅ fait — N2 : DER 12,5% ± 3,5 |
+| M2 | ✅ fait — DER 0,091 ± 0,041 |
 | M3 | ✅ fait — N3 : SepFormer conditionnel (`--separate`, défaut OFF, ADR-0008) |
-| M4 | ✅ fait — N2 : pairwise-F1 0,51 / ARI 0,20 |
+| M4 | ✅ fait — pairwise-F1 0,651 / ARI 0,480 |
 | M5 | ✅ fait — `deconvolute benchmark` |
 | M6 | ⛔ clôturé — ADR-0009, code conservé derrière `--reconstructor graph` |
 
@@ -142,4 +142,6 @@ conversations, correction manuelle des associations, export.
 N2 beam search dépendant-locuteur) et Normalisation WER (N3 déjà fait).
 Séparation ON restant OFF par défaut (ADR-0008 renforcé par N4 : trois
 variantes ASR-par-tige échouent sur SepFormer 2-speakers vs 4 locuteurs
+réels). Piste alternative : pyannote.audio pour diarisation (non disponible
+dans l'environnement actuel).
 réels).
