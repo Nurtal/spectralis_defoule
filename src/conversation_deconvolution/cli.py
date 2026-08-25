@@ -26,6 +26,7 @@ def run(
     plot: Path = typer.Option(None, "--plot", "-p"),
     separate: bool = typer.Option(None, "--separate/--no-separate"),
     reconstructor: str = typer.Option(None, "--reconstructor", "-r"),
+    diarization_backend: str = typer.Option("custom", "--diarization-backend"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if num_speakers:
@@ -34,6 +35,9 @@ def run(
         cfg.separation.enabled = separate
     if reconstructor is not None:
         cfg.reconstructor_kind = reconstructor
+    if diarization_backend not in ("custom", "pyannote"):
+        raise typer.BadParameter("--diarization-backend: custom|pyannote")
+    cfg.diarization.backend = diarization_backend
     from conversation_deconvolution.conversation.viz import plot_timeline
     from conversation_deconvolution.pipeline import build_pipeline
 
@@ -97,10 +101,14 @@ def benchmark(
     config_path: Path = typer.Option(None, "--config", "-c"),
     separate: bool = typer.Option(None, "--separate/--no-separate"),
     reconstructor: str = typer.Option("heuristic", "--reconstructor"),
+    diarization_backend: str = typer.Option("custom", "--diarization-backend"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if separate is not None:
         cfg.separation.enabled = separate
+    if diarization_backend not in ("custom", "pyannote"):
+        raise typer.BadParameter("--diarization-backend: custom|pyannote")
+    cfg.diarization.backend = diarization_backend
     kinds = {
         "both": ["heuristic", "graph"],
         "heuristic": ["heuristic"],

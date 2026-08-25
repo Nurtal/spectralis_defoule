@@ -24,6 +24,9 @@ dependencies = [
     "networkx>=3.2",
 ]
 
+[project.optional-dependencies]
+pyannote = ["pyannote.audio>=3.1"]
+
 [project.scripts]
 deconvolute = "conversation_deconvolution.cli:app"
 

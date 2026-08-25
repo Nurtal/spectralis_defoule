@@ -202,10 +202,20 @@ def build_pipeline(config: PipelineConfig) -> DeconvolutionPipeline:
     )
     from conversation_deconvolution.separation.sepformer import SepformerSeparator
 
-    vad = SileroVad(config.vad)
-    embedder = EcapaEmbedder()
-    clusterer = AgglomerativeClusterer(config.diarization.distance_threshold)
-    diarizer = SpeakerDiarizer(vad, embedder, clusterer, config.diarization)
+    if config.diarization.backend == "pyannote":
+        import os
+
+        from conversation_deconvolution.diarization.pyannote_diarizer import (
+            PyannoteDiarizer,
+        )
+
+        token = os.environ.get("HF_TOKEN", "")
+        diarizer = PyannoteDiarizer(token=token)
+    else:
+        vad = SileroVad(config.vad)
+        embedder = EcapaEmbedder()
+        clusterer = AgglomerativeClusterer(config.diarization.distance_threshold)
+        diarizer = SpeakerDiarizer(vad, embedder, clusterer, config.diarization)
     text_embedder = SentenceTransformerEmbedder(config.text_embedding_model)
     reconstructor = build_reconstructor(config, text_embedder)
     separator = (
