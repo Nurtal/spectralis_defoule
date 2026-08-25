@@ -50,8 +50,6 @@ class HeuristicReconstructor:
                 streams.append(best)
             self._assign(best, i, u, embeddings[i])
 
-        self._refine(ordered, embeddings, streams, spans)
-
         conversations = []
         ranked = sorted(streams, key=lambda s: ordered[s.members[0]].start)
         for rank, st in enumerate(ranked, start=1):

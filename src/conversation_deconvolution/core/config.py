@@ -48,11 +48,11 @@ class AsrConfig:
 class ReconstructionConfig:
     max_gap: float = 30.0
     tau: float = 4.0
-    w_temporal: float = 0.20
-    w_alternation: float = 0.15
-    w_semantic: float = 0.35
-    w_same_speaker: float = 0.30
-    threshold: float = 0.5
+    w_temporal: float = 0.10
+    w_alternation: float = 0.0
+    w_semantic: float = 0.50
+    w_same_speaker: float = 0.40
+    threshold: float = 0.4
     max_speaker_overlap_ratio: float = 0.05
 
 
