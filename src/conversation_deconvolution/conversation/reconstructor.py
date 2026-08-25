@@ -72,19 +72,11 @@ class HeuristicReconstructor:
         temporal = math.exp(-gap / self.cfg.tau)
         same = 1.0 if (u.speaker and u.speaker in st.speakers) else 0.0
         semantic = max(0.0, min(1.0, float(np.dot(e, st.centroid))))
-        alternation = self._alternation_score(u, st)
         return (
             self.cfg.w_temporal * temporal
             + self.cfg.w_semantic * semantic
             + self.cfg.w_same_speaker * same
-            + self.cfg.w_alternation * alternation
         )
-
-    @staticmethod
-    def _alternation_score(u: Utterance, st: _Stream) -> float:
-        if u.speaker and st.last_speaker is not None and u.speaker != st.last_speaker:
-            return 1.0
-        return 0.0
 
     def _assign(self, st: _Stream, idx: int, u: Utterance, e) -> None:
         st.members.append(idx)
@@ -96,81 +88,6 @@ class HeuristicReconstructor:
             st.centroid = e.copy()
         else:
             st.centroid = st.centroid + (e - st.centroid) / len(st.members)
-
-    def _refine(
-        self,
-        ordered: list[Utterance],
-        embeddings,
-        streams: list[_Stream],
-        spans: dict[str, list[tuple[float, float]]],
-    ) -> None:
-        for _ in range(3):
-            moved = False
-            for st in streams[:]:
-                for idx in list(st.members):
-                    u = ordered[idx]
-                    e = embeddings[idx]
-                    best_st = st
-                    best_score = self._score_without(st, idx, u, e, ordered)
-                    for other in streams:
-                        if other is st:
-                            continue
-                        if self._conflicts(other, u.speaker, spans):
-                            continue
-                        score = self._score_candidate(other, u, e)
-                        if score > best_score:
-                            best_score = score
-                            best_st = other
-                    if best_st is not st:
-                        self._remove(st, idx)
-                        self._assign(best_st, idx, u, e)
-                        moved = True
-            if not moved:
-                break
-        streams[:] = [s for s in streams if s.members]
-
-    def _score_without(
-        self, st: _Stream, idx: int, u: Utterance, e, ordered: list[Utterance]
-    ) -> float:
-        if len(st.members) <= 1:
-            return self._stream_score(st, u, e)
-        centroid = st.centroid - (e - st.centroid) / (len(st.members) - 1)
-        remaining_speakers = {ordered[m].speaker for m in st.members if m != idx}
-        gap = max(0.0, u.start - st.last_end)
-        temporal = math.exp(-gap / self.cfg.tau)
-        same = 1.0 if (u.speaker and u.speaker in remaining_speakers) else 0.0
-        semantic = max(0.0, min(1.0, float(np.dot(e, centroid))))
-        alternation = self._alternation_score(u, st)
-        return (
-            self.cfg.w_temporal * temporal
-            + self.cfg.w_semantic * semantic
-            + self.cfg.w_same_speaker * same
-            + self.cfg.w_alternation * alternation
-        )
-
-    def _score_candidate(self, st: _Stream, u: Utterance, e) -> float:
-        if st.centroid is None:
-            return 0.0
-        gap = max(0.0, u.start - st.last_end)
-        temporal = math.exp(-gap / self.cfg.tau)
-        same = 1.0 if (u.speaker and u.speaker in st.speakers) else 0.0
-        semantic = max(0.0, min(1.0, float(np.dot(e, st.centroid))))
-        alternation = self._alternation_score(u, st)
-        return (
-            self.cfg.w_temporal * temporal
-            + self.cfg.w_semantic * semantic
-            + self.cfg.w_same_speaker * same
-            + self.cfg.w_alternation * alternation
-        )
-
-    @staticmethod
-    def _remove(st: _Stream, idx: int) -> None:
-        st.members.remove(idx)
-        if not st.members:
-            st.speakers.clear()
-            st.centroid = None
-            st.last_end = -math.inf
-            st.last_speaker = None
 
     def _conflicts(
         self, st: _Stream, speaker: str | None, spans: dict[str, list[tuple[float, float]]]

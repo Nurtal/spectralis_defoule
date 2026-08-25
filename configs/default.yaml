@@ -27,7 +27,6 @@ reconstruction:
   max_gap: 30.0
   tau: 4.0
   w_temporal: 0.20
-  w_alternation: 0.15
   w_semantic: 0.35
   w_same_speaker: 0.30
   threshold: 0.5

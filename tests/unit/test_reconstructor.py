@@ -145,46 +145,9 @@ def test_non_overlapping_alternating_voices_still_grouped():
     assert len(convs) == 1
 
 
-def test_alternation_bonus_when_speakers_switch():
-    cfg = ReconstructionConfig(
-        w_temporal=0.0,
-        w_semantic=0.0,
-        w_same_speaker=0.0,
-        w_alternation=1.0,
-        threshold=0.3,
-    )
-    recon = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg)
-    turns = [
-        Utterance(id="t0", speaker="A", start=0.0, end=1.0, text="bonjour"),
-        Utterance(id="t1", speaker="B", start=1.5, end=2.5, text="salut"),
-        Utterance(id="t2", speaker="A", start=3.0, end=4.0, text="ca va"),
-    ]
-    result = recon.reconstruct(turns)
-    assert len(result) == 1
-    assert len(result[0].utterances) == 3
-
-
-def test_no_alternation_penalty_when_same_speaker():
-    cfg = ReconstructionConfig(
-        w_temporal=0.0,
-        w_semantic=0.0,
-        w_same_speaker=0.0,
-        w_alternation=1.0,
-        threshold=0.3,
-    )
-    recon = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg)
-    turns = [
-        Utterance(id="t0", speaker="A", start=0.0, end=1.0, text="bonjour"),
-        Utterance(id="t1", speaker="A", start=1.5, end=2.5, text="encore moi"),
-        Utterance(id="t2", speaker="A", start=3.0, end=4.0, text="toujours moi"),
-    ]
-    result = recon.reconstruct(turns)
-    assert len(result) == 3
-
-
 def test_default_weights_sum_to_one():
     cfg = ReconstructionConfig()
-    total = cfg.w_temporal + cfg.w_semantic + cfg.w_same_speaker + cfg.w_alternation
+    total = cfg.w_temporal + cfg.w_semantic + cfg.w_same_speaker
     assert abs(total - 1.0) < 1e-9
 
 
@@ -193,7 +156,6 @@ def test_threshold_actually_separates():
         w_temporal=0.25,
         w_semantic=0.25,
         w_same_speaker=0.25,
-        w_alternation=0.25,
         threshold=0.9,
     )
     recon = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg)
@@ -211,7 +173,6 @@ def test_refinement_reassigns_early_misclassifications():
         w_temporal=0.20,
         w_semantic=0.35,
         w_same_speaker=0.30,
-        w_alternation=0.15,
         threshold=0.5,
     )
     recon = HeuristicReconstructor(embedder, cfg)
@@ -235,7 +196,6 @@ def test_refinement_merges_split_same_topic():
         w_temporal=0.20,
         w_semantic=0.35,
         w_same_speaker=0.30,
-        w_alternation=0.15,
         threshold=0.5,
     )
     recon = HeuristicReconstructor(embedder, cfg)
