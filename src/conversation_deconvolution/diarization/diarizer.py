@@ -33,6 +33,7 @@ class SpeakerDiarizer:
         runs = windows_to_turns(
             windows,
             [int(l) for l in labels],
+            cell_sec=self.cfg.cell_sec,
             min_turn_sec=self.cfg.min_turn_sec,
         )
         turns = [SpeakerTurn(f"SPEAKER_{lab:02d}", start, end) for lab, start, end in runs]

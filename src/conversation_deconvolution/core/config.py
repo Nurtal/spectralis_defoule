@@ -19,6 +19,7 @@ class DiarizationConfig:
     window_sec: float = 1.0
     hop_sec: float = 0.33
     min_turn_sec: float = 0.3
+    cell_sec: float = 0.125
 
 
 @dataclass
