@@ -98,7 +98,7 @@ def test_same_speaker_links_across_large_gap():
         U("b1", "B", 1.6, 3.0, "le rapport final est termine"),
         U("a2", "A", 12.0, 13.5, "bon je dois y aller salut"),
     ]
-    cfg = ReconstructionConfig()
+    cfg = ReconstructionConfig(w_same_speaker=0.6)
     convs = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg).reconstruct(utts)
     members = sorted(tuple(sorted(u.id for u in c.utterances)) for c in convs)
     assert ("a1", "a2") in [m for m in members]
@@ -180,3 +180,26 @@ def test_no_alternation_penalty_when_same_speaker():
     ]
     result = recon.reconstruct(turns)
     assert len(result) == 3
+
+
+def test_default_weights_sum_to_one():
+    cfg = ReconstructionConfig()
+    total = cfg.w_temporal + cfg.w_semantic + cfg.w_same_speaker + cfg.w_alternation
+    assert abs(total - 1.0) < 1e-9
+
+
+def test_threshold_actually_separates():
+    cfg = ReconstructionConfig(
+        w_temporal=0.25,
+        w_semantic=0.25,
+        w_same_speaker=0.25,
+        w_alternation=0.25,
+        threshold=0.9,
+    )
+    recon = HeuristicReconstructor(TopicTextEmbedder(TOPICS), cfg)
+    turns = [
+        Utterance(id="t0", speaker="A", start=0.0, end=1.0, text="bonjour"),
+        Utterance(id="t1", speaker="B", start=10.0, end=11.0, text="a des questions"),
+    ]
+    result = recon.reconstruct(turns)
+    assert len(result) == 2
