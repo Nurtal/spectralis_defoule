@@ -202,7 +202,7 @@ def evaluate_results(ref, hyp) -> dict:
     wer_metrics = (
         wer_report([(g.text, p.text) for g, p in matched_non_overlap])
         if matched_non_overlap
-        else {"wer": 1.0}
+        else None
     )
     matched_ov = [(g, p) for g, p in matched if g.id not in non_overlap_ids]
     wer_overlap = (
@@ -217,7 +217,7 @@ def evaluate_results(ref, hyp) -> dict:
     )
     out = {
         "DER": der_res.der,
-        "WER (non-overlap)": wer_metrics["wer"],
+        "WER (non-overlap)": wer_metrics["wer"] if wer_metrics else None,
         "pairwise_F1": conv_metrics["pairwise_f1"],
         "ARI": conv_metrics["ari"],
         "NMI": conv_metrics["nmi"],

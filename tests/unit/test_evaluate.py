@@ -44,6 +44,44 @@ def test_dense_interleaved_grouping_still_evaluated():
     assert "WER (overlap)" in m
 
 
+def test_wer_non_overlap_none_when_no_eligible_utterance():
+    def U(uid, s, e, text):
+        from conversation_deconvolution.core.types import Utterance
+
+        return Utterance(id=uid, speaker="S", start=s, end=e, text=text)
+
+    ref = TranscriptResult(
+        utterances=[],
+        overlaps=[],
+        conversations=[
+            _conv(
+                "c1",
+                [U("a1", 0.0, 2.0, "bonjour ici"), U("a2", 2.5, 4.5, "a plus tard")],
+            ),
+            _conv(
+                "c2",
+                [U("b1", 0.5, 2.5, "salut la bas"), U("b2", 3.0, 5.0, "bonne soiree")],
+            ),
+        ],
+    )
+    hyp = TranscriptResult(
+        utterances=[],
+        overlaps=[],
+        conversations=[
+            _conv(
+                "k1",
+                [U("p1", 0.0, 2.0, "bonjour ici"), U("p2", 2.5, 4.5, "a plus tard")],
+            ),
+            _conv(
+                "k2",
+                [U("p3", 0.5, 2.5, "salut la bas"), U("p4", 3.0, 5.0, "bonne soiree")],
+            ),
+        ],
+    )
+    m = evaluate_results(ref, hyp)
+    assert m["WER (non-overlap)"] is None
+
+
 def test_conversation_metrics_id_mapping():
     from conversation_deconvolution.evaluation.clustering_metrics import (
         conversation_metrics,
