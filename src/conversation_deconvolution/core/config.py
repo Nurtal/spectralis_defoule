@@ -38,7 +38,7 @@ class AsrConfig:
     device: str = "cuda"
     compute_type: str = "float16"
     language: str | None = None
-    context_pad_sec: float = 0.25
+    context_pad_sec: float = 0.0
 
 
 @dataclass
