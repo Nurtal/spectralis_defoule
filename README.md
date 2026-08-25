@@ -732,8 +732,11 @@ Structure détaillée : `docs/superpowers/specs/` (design), `docs/adr/`
 **Phase actuelle :** Phases 0→5 implémentées (baseline mesurable) ;
 itération N3 : séparation conditionnelle SepFormer intégrée derrière flag
 (`--separate`, désactivée par défaut — WER overlap dégradé mais grouping
-amélioré, voir ADR-0008 et `reports/benchmark.md`).
+amélioré, voir ADR-0008) ; itération M6 : graphe supervisé LR + Louvain
+livré derrière `--reconstructor graph` mais rejeté comme défaut (critère
+non atteint, cause racine amont — voir ADR-0009).
 
-**Prochaine étape :** phase 6 — graphe de conversations ; en parallèle,
-rendre la séparation ON rentable sur le WER overlap (ASR par tige +
-sélection texte-level).
+**Prochaine étape :** itération amont pour rendre l'information
+« conversation » recoverable — séparation ON rentable sur le WER overlap
+(ASR par tige + sélection texte-level), diarization multi-voix robuste à
+l'entrelacement ; puis ré-évaluation `--reconstructor both`.

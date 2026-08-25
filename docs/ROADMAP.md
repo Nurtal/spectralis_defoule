@@ -96,10 +96,23 @@ reproductible (même seed ⇒ mêmes chiffres).
 
 ---
 
-## M6 — Graphe de conversations *(Phase 6, outlook)*
+## M6 — Graphe de conversations *(Phase 6)*
 
-Nœuds = utterances, arêtes scorées ; features enrichies (prosodie, position)
-; community detection puis GNN si nécessaire ; comparaison aux baselines M4.
+**Livrables**
+
+- [x] Infrastructure complète : features de paire ordonnées, entraîneur LR
+      avec persistance JSON, commande `deconvolute train` (seeds dédiés),
+      `GraphReconstructor` (Louvain), sélection `--reconstructor`,
+      benchmark comparatif `both`.
+- [x] Itérations : retrait des features d'identité locuteur (raccourci),
+      balayages seuil × résolution, agrégation voix-niveau, amélioration
+      front-end (`context_pad 0`, métrique WER honnête).
+- [ ] ~~Battre la baseline heuristic sur le benchmark seedé~~ — **non
+      atteint** : l'information « conversation » est détruite en amont
+      (contamination inter-conversations, fusion de voix) ; voir ADR-0009.
+
+**Acceptation :** non validée — approche rejetée comme défaut, code
+conservé derrière `--reconstructor graph`.
 
 ## M7 — Robustesse *(Phase 7, outlook)*
 
@@ -123,8 +136,10 @@ conversations, correction manuelle des associations, export.
 | M3 | ✅ fait — itération N3 : séparation conditionnelle SepFormer intégrée derrière flag (`--separate`, défaut off, ADR-0008) ; WER overlap dégradé avec tiges (1.00 vs 0.80 sans) mais grouping amélioré (ARI 0.26 / NMI 0.54) ; détail reports/benchmark.md |
 | M4 | ✅ fait — itération N2 : reconstruction par flux (décodage séquentiel contre extrémités de flux, cohésion même-locuteur, can't-link chevauchement) ; pairwise-F1 0,51 / ARI 0,20 sur benchmark. Limite : WER non-overlap 0,89 (tours fins sans séparation amont) |
 | M5 | ✅ fait (`deconvolute benchmark`) ; métriques grouping réparées (bug d'appariement d'ids — F1/ARI/NMI significatifs). N3 : rapport inclut WER overlap, OFF/ON comparables même seed |
+| M6 | ⛔ clôturé — graphe supervisé LR + Louvain rejeté comme défaut (ADR-0009) : critère non atteint, cause racine = amont (contamination inter-conversations, fusion de voix) ; code conservé derrière `--reconstructor graph`. Gains collatéraux : métrique WER non-overlap honnête, `context_pad 0` (WER −6,6 pts, ARI heuristic 0,26) |
 
-**Prochaine étape :** M6 — graphe de conversations (nœuds utterances,
-arêtes scorées enrichies, community detection vs baselines M4). En
-parallèle : itérations pour rendre la séparation ON rentable sur le WER
-overlap (ASR par tige + sélection texte-level, ADR-0008).
+**Prochaine étape :** itération amont rendant l'information « conversation »
+recoverable (séparation ON rentable — ASR par tige + sélection texte-level,
+ADR-0008 ; diarization multi-voix robuste à l'entrelacement), puis
+ré-évaluation `--reconstructor both` contre la baseline. Perspective :
+graphe de voix par co-occurrence temporelle (candidate post-amont).
