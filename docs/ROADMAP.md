@@ -142,6 +142,7 @@ conversations, correction manuelle des associations, export.
 N2 beam search dépendant-locuteur) et Normalisation WER (N3 déjà fait).
 Séparation ON restant OFF par défaut (ADR-0008 renforcé par N4 : trois
 variantes ASR-par-tige échouent sur SepFormer 2-speakers vs 4 locuteurs
-réels). Piste alternative : pyannote.audio pour diarisation (non disponible
-dans l'environnement actuel).
+réels). Pyannote.audio intégré comme backend alternatif (`--diarization-backend pyannote`).
+Sur données synthétiques notre pipeline DIY reste meilleur (DER 0.091 vs
+0.130), mais pyannote peut être utile sur données réelles.
 réels).

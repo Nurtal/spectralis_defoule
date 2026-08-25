@@ -733,7 +733,8 @@ Structure détaillée : `docs/superpowers/specs/` (design), `docs/adr/`
 M6 clôturé (ADR-0009, code conservé derrière `--reconstructor graph`) ;
 N4 : séparation ON évaluée (splice in-place, ADR-0008 renforcé) — trois
 variantes ASR-par-tige dégradent WER overlap vs OFF, verdict OFF maintenu ;
-N3 fait (normalisation WER) ; reconstructor optimisé (F1 0,651, ARI 0,480).
+N3 fait (normalisation WER) ; reconstructor optimisé (F1 0,651, ARI 0,480) ;
+pyannote.audio intégré comme backend alternatif.
 
 **Métriques finales (4 datasets, 4 seeds) :**
 - DER : 0,091 ± 0,041
