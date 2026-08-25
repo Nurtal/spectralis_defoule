@@ -23,7 +23,7 @@ asr:
   device: cuda
   compute_type: float16
   language: fr
-  context_pad_sec: 0.0
+  beam_size: 1
 reconstruction:
   max_gap: 30.0
   tau: 4.0
