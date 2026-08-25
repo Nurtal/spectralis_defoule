@@ -78,52 +78,34 @@ class DeconvolutionPipeline:
         seg_e = int(re_ * sr) - reg_off
         return np.asarray(region.stems[top][seg_s:seg_e], dtype=np.float32)
 
-    def _turn_segments(self, turn, sep_result, cache) -> list[tuple[float, float, np.ndarray]]:
+    def _turn_signal(self, turn, sep_result, cache) -> tuple[np.ndarray, bool]:
         sr = 16000
         mix = sep_result.mix
+        s = int(turn.start * sr)
+        e = min(len(mix), int(turn.end * sr))
+        signal = np.asarray(mix[s:e], dtype=np.float32).copy()
+        used_stem = False
 
         if not sep_result.regions or self.stem_embedder is None:
-            s = int(turn.start * sr)
-            e = min(len(mix), int(turn.end * sr))
-            return [(turn.start, turn.end, mix[s:e])]
+            return signal, False
 
         ref_emb = self._turn_reference(turn, sep_result, cache)
         if ref_emb is None:
-            s = int(turn.start * sr)
-            e = min(len(mix), int(turn.end * sr))
-            return [(turn.start, turn.end, mix[s:e])]
+            return signal, False
 
-        stem_parts: list[tuple[float, float, np.ndarray]] = []
         for region in sep_result.regions:
             stem_audio = self._assign_best_stem(turn, region, ref_emb, cache)
-            if stem_audio is not None:
-                rs = max(region.segment.start, turn.start)
-                re_ = min(region.segment.end, turn.end)
-                stem_parts.append((rs, re_, stem_audio))
+            if stem_audio is None:
+                continue
+            rs = max(region.segment.start, turn.start)
+            idx_s = int((rs - turn.start) * sr)
+            n = min(len(stem_audio), len(signal) - idx_s)
+            if n <= 0:
+                continue
+            signal[idx_s : idx_s + n] = stem_audio[:n]
+            used_stem = True
 
-        stem_parts.sort(key=lambda t: t[0])
-
-        segments: list[tuple[float, float, np.ndarray]] = []
-        cursor = turn.start
-        for rs, re_, stem_audio in stem_parts:
-            if rs > cursor + 0.01:
-                s = int(cursor * sr)
-                e = min(len(mix), int(rs * sr))
-                if e > s:
-                    segments.append((cursor, rs, mix[s:e]))
-            segments.append((rs, re_, stem_audio))
-            cursor = re_
-        if cursor < turn.end - 0.01:
-            s = int(cursor * sr)
-            e = min(len(mix), int(turn.end * sr))
-            if e > s:
-                segments.append((cursor, turn.end, mix[s:e]))
-
-        if not segments:
-            s = int(turn.start * sr)
-            e = min(len(mix), int(turn.end * sr))
-            segments = [(turn.start, turn.end, mix[s:e])]
-        return segments
+        return signal, used_stem
 
     def _turn_reference(self, turn, sep_result, cache):
         centroids = getattr(self.diarizer, "speaker_centroids_", None)
@@ -162,26 +144,17 @@ class DeconvolutionPipeline:
         utterances: list[Utterance] = []
         cache: dict = {"refs": {}, "stem_embs": {}}
         for i, turn in enumerate(turns):
-            segments = self._turn_segments(turn, sep_result, cache)
-            parts = []
-            total_conf = 0.0
-            for _, _, seg_audio in segments:
-                if len(seg_audio) == 0:
-                    continue
-                asr_res = self.asr.transcribe(seg_audio)
-                parts.append(asr_res.text)
-                total_conf += asr_res.confidence
-            text = " ".join(parts)
-            conf = total_conf / max(len(parts), 1)
+            signal, _used = self._turn_signal(turn, sep_result, cache)
+            asr_res = self.asr.transcribe(signal)
             utterances.append(
                 Utterance(
                     id=f"utt_{i:03d}",
                     speaker=turn.speaker,
                     start=round(turn.start, 3),
                     end=round(turn.end, 3),
-                    text=text,
-                    confidence=round(conf, 4),
-                    language="fr",
+                    text=asr_res.text,
+                    confidence=round(asr_res.confidence, 4),
+                    language=asr_res.language,
                 )
             )
         conversations = self.reconstructor.reconstruct(utterances)
