@@ -84,8 +84,8 @@ class RecordingAsr:
         import types
 
         self.inputs.append(np.asarray(segment))
-        rms_mid = float(np.sqrt(np.mean(segment[SR : 2 * SR] ** 2)))
-        dominant = "low" if rms_mid > 0.5 else "high"
+        power = float(np.mean(np.asarray(segment) ** 2))
+        dominant = "low" if power > 0.3 else "high"
         return types.SimpleNamespace(text=dominant, confidence=0.9, language="fr")
 
 
@@ -128,6 +128,23 @@ def test_overlap_turns_get_assigned_stems():
     assert len(result.utterances) == 2
     assert result.utterances[0].text == "low"
     assert result.utterances[1].text == "high"
+    assert all(len(x) <= SR for x in asr.inputs)
+
+
+def test_unassigned_turn_keeps_mix_audio():
+    class QuietSeparator(LoudSeparator):
+        def separate(self, mix_, regions):
+            out = super().separate(mix_, regions)
+            out.regions = [
+                SeparatedRegion(segment=r.segment, stems=[s * 0.01 for s in r.stems])
+                for r in out.regions
+            ]
+            return out
+
+    asr = RecordingAsr()
+    result = make_result(asr, QuietSeparator())
+    assert len(result.utterances) == 2
+    assert all(len(x) == 2 * SR for x in asr.inputs)
 
 
 def test_no_embedder_falls_back_to_mix():
