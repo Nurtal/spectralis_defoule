@@ -132,17 +132,19 @@ conversations, correction manuelle des associations, export.
 |---|---|
 | M0 | ✅ fait |
 | M1 | ✅ fait |
-| M2 | ✅ fait — DER 0,091 ± 0,041 |
+| M2 | ✅ fait — DER 0,091 ± 0,041 (4 speakers) |
 | M3 | ✅ fait — N3 : SepFormer conditionnel (`--separate`, défaut OFF, ADR-0008) |
-| M4 | ✅ fait — pairwise-F1 0,651 / ARI 0,480 |
+| M4 | ✅ fait — pairwise-F1 0,651 / ARI 0,480 (optimisé, ADR-0010) |
 | M5 | ✅ fait — `deconvolute benchmark` |
 | M6 | ⛔ clôturé — ADR-0009, code conservé derrière `--reconstructor graph` |
 
+**Itérations optimisation (ADR-0010) :** diarisation fenêtres 1.0s/hop
+0.33s/cell 0.125s, reconstruction semantic-heavy (threshold 0.4),
+pyannote.audio intégré comme backend alternatif. Plafond atteint
+sur données synthétiques — F1/ARI dégradent fortement à 6 speakers.
+
 **Prochaine étape :** itérations amont qualité transcription (N1 Lite-TFNet,
 N2 beam search dépendant-locuteur) et Normalisation WER (N3 déjà fait).
-Séparation ON restant OFF par défaut (ADR-0008 renforcé par N4 : trois
-variantes ASR-par-tige échouent sur SepFormer 2-speakers vs 4 locuteurs
-réels). Pyannote.audio intégré comme backend alternatif (`--diarization-backend pyannote`).
-Sur données synthétiques notre pipeline DIY reste meilleur (DER 0.091 vs
-0.130), mais pyannote peut être utile sur données réelles.
+Séparation ON restant OFF par défaut (ADR-0008 renforcé par N4).
+Pyannote utile comme fallback pour données réelles.
 réels).

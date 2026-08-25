@@ -734,13 +734,17 @@ M6 clôturé (ADR-0009, code conservé derrière `--reconstructor graph`) ;
 N4 : séparation ON évaluée (splice in-place, ADR-0008 renforcé) — trois
 variantes ASR-par-tige dégradent WER overlap vs OFF, verdict OFF maintenu ;
 N3 fait (normalisation WER) ; reconstructor optimisé (F1 0,651, ARI 0,480) ;
-pyannote.audio intégré comme backend alternatif.
+pyannote.audio intégré comme backend alternatif (ADR-0010).
 
-**Métriques finales (4 datasets, 4 seeds) :**
+**Métriques finales (4 datasets, 4 seeds, 4 speakers) :**
 - DER : 0,091 ± 0,041
 - pairwise-F1 : 0,651 ± 0,245
 - ARI : 0,480 ± 0,346
 - WER non-overlap : 0,607 ± 0,107
+
+**Limites connues :** plafond atteint sur données synthétiques.
+Dégradation forte à 6+ speakers (F1→0). Les données synthétiques
+ne discriminent pas les modèles ASR (small=medium=large).
 
 **Prochaine étape :** itérations amont qualité transcription — N1 (refonte
 SM-TFNet → Lite-TFNet) et N2 (beam search dépendant-locuteur) pour
