@@ -730,13 +730,12 @@ Structure détaillée : `docs/superpowers/specs/` (design), `docs/adr/`
 **Projet :** expérimental / R&D
 
 **Phase actuelle :** Phases 0→5 implémentées (baseline mesurable) ;
-itération N3 : séparation conditionnelle SepFormer intégrée derrière flag
-(`--separate`, désactivée par défaut — WER overlap dégradé mais grouping
-amélioré, voir ADR-0008) ; itération M6 : graphe supervisé LR + Louvain
-livré derrière `--reconstructor graph` mais rejeté comme défaut (critère
-non atteint, cause racine amont — voir ADR-0009).
+M6 clôturé (ADR-0009, code conservé derrière `--reconstructor graph`) ;
+N4 : séparation ON évaluée (splice in-place, ADR-0008 renforcé) — trois
+variantes ASR-par-tige dégradent WER overlap vs OFF, verdict OFF maintenu ;
+N3 fait (normalisation WER).
 
-**Prochaine étape :** itération amont pour rendre l'information
-« conversation » recoverable — séparation ON rentable sur le WER overlap
-(ASR par tige + sélection texte-level), diarization multi-voix robuste à
-l'entrelacement ; puis ré-évaluation `--reconstructor both`.
+**Prochaine étape :** itérations amont qualité transcription — N1 (refonte
+SM-TFNet → Lite-TFNet) et N2 (beam search dépendant-locuteur) pour
+réduire le WER non-overlap de 0,57 ; ré-évaluer ensuite si la séparation
+peut devenir rentable.
