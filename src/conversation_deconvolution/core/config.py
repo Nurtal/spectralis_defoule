@@ -37,7 +37,7 @@ class AsrConfig:
     model_size: str = "small"
     device: str = "cuda"
     compute_type: str = "float16"
-    language: str | None = None
+    language: str | None = "fr"
     context_pad_sec: float = 0.0
     beam_size: int = 1
     initial_prompt: str | None = None

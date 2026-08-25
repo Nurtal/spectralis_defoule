@@ -66,6 +66,7 @@ def test_repo_default_yaml_loads():
 def test_asr_beam_and_prompt_defaults():
     cfg = PipelineConfig.default()
     assert cfg.asr.beam_size == 1
+    assert cfg.asr.language == "fr"
     assert cfg.asr.initial_prompt is None
 
 
