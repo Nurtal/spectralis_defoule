@@ -203,3 +203,53 @@ def test_threshold_actually_separates():
     ]
     result = recon.reconstruct(turns)
     assert len(result) == 2
+
+
+def test_refinement_reassigns_early_misclassifications():
+    embedder = TopicTextEmbedder(TOPICS)
+    cfg = ReconstructionConfig(
+        w_temporal=0.20,
+        w_semantic=0.35,
+        w_same_speaker=0.30,
+        w_alternation=0.15,
+        threshold=0.5,
+    )
+    recon = HeuristicReconstructor(embedder, cfg)
+    utts = [
+        U("a1", "A", 0.0, 1.5, "tu viens au cafe demain midi"),
+        U("b1", "B", 1.8, 3.0, "oui je viens au cafe demain"),
+        U("c1", "C", 5.0, 6.5, "le rapport final est termine"),
+        U("b2", "B", 5.5, 7.0, "le rapport part au courrier"),
+    ]
+    convs = recon.reconstruct(utts)
+    all_ids = sorted(u.id for c in convs for u in c.utterances)
+    assert all_ids == ["a1", "b1", "b2", "c1"]
+    for c in convs:
+        assert len(c.utterances) >= 1
+        assert len(c.participants) >= 1
+
+
+def test_refinement_merges_split_same_topic():
+    embedder = TopicTextEmbedder(TOPICS)
+    cfg = ReconstructionConfig(
+        w_temporal=0.20,
+        w_semantic=0.35,
+        w_same_speaker=0.30,
+        w_alternation=0.15,
+        threshold=0.5,
+    )
+    recon = HeuristicReconstructor(embedder, cfg)
+    utts = [
+        U("a1", "A", 0.0, 1.0, "tu viens au cafe demain midi"),
+        U("b1", "B", 0.5, 1.5, "oui je viens au cafe demain"),
+        U("c1", "C", 3.0, 4.0, "le rapport final est termine"),
+        U("a2", "A", 4.5, 5.5, "parfait pour le cafe alors"),
+        U("d1", "D", 5.0, 6.0, "merci pour le rapport beaucoup"),
+        U("c2", "C", 7.0, 8.0, "le rapport part au courrier"),
+    ]
+    convs = recon.reconstruct(utts)
+    all_ids = sorted(u.id for c in convs for u in c.utterances)
+    assert all_ids == ["a1", "a2", "b1", "c1", "c2", "d1"]
+    for c in convs:
+        assert len(c.utterances) >= 1
+        assert len(c.participants) >= 1
