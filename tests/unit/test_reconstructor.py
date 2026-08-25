@@ -167,7 +167,7 @@ def test_threshold_actually_separates():
     assert len(result) == 2
 
 
-def test_refinement_reassigns_early_misclassifications():
+def test_mixed_speakers_preserves_all_utterances():
     embedder = TopicTextEmbedder(TOPICS)
     cfg = ReconstructionConfig(
         w_temporal=0.20,
@@ -190,7 +190,7 @@ def test_refinement_reassigns_early_misclassifications():
         assert len(c.participants) >= 1
 
 
-def test_refinement_merges_split_same_topic():
+def test_same_topic_different_speakers_grouped():
     embedder = TopicTextEmbedder(TOPICS)
     cfg = ReconstructionConfig(
         w_temporal=0.20,

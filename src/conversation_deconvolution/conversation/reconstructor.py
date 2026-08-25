@@ -16,7 +16,6 @@ class _Stream:
         self.speakers: set[str] = set()
         self.last_end = -math.inf
         self.centroid = None
-        self.last_speaker: str | None = None
 
 
 class HeuristicReconstructor:
@@ -82,7 +81,6 @@ class HeuristicReconstructor:
         st.members.append(idx)
         if u.speaker:
             st.speakers.add(u.speaker)
-            st.last_speaker = u.speaker
         st.last_end = max(st.last_end, u.end)
         if st.centroid is None:
             st.centroid = e.copy()
