@@ -16,6 +16,7 @@ class _Stream:
         self.speakers: set[str] = set()
         self.last_end = -math.inf
         self.centroid = None
+        self.last_speaker: str | None = None
 
 
 class HeuristicReconstructor:
@@ -71,16 +72,25 @@ class HeuristicReconstructor:
         temporal = math.exp(-gap / self.cfg.tau)
         same = 1.0 if (u.speaker and u.speaker in st.speakers) else 0.0
         semantic = max(0.0, min(1.0, float(np.dot(e, st.centroid))))
+        alternation = self._alternation_score(u, st)
         return (
             self.cfg.w_temporal * temporal
             + self.cfg.w_semantic * semantic
             + self.cfg.w_same_speaker * same
+            + self.cfg.w_alternation * alternation
         )
+
+    @staticmethod
+    def _alternation_score(u: Utterance, st: _Stream) -> float:
+        if u.speaker and st.last_speaker is not None and u.speaker != st.last_speaker:
+            return 1.0
+        return 0.0
 
     def _assign(self, st: _Stream, idx: int, u: Utterance, e) -> None:
         st.members.append(idx)
         if u.speaker:
             st.speakers.add(u.speaker)
+            st.last_speaker = u.speaker
         st.last_end = max(st.last_end, u.end)
         if st.centroid is None:
             st.centroid = e.copy()
