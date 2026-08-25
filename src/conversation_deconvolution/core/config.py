@@ -16,8 +16,8 @@ class DiarizationConfig:
     distance_threshold: float = 0.75
     min_segment_sec: float = 0.4
     num_speakers: int | None = None
-    window_sec: float = 1.5
-    hop_sec: float = 0.5
+    window_sec: float = 1.0
+    hop_sec: float = 0.33
     min_turn_sec: float = 0.3
 
 
