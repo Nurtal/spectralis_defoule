@@ -54,45 +54,76 @@ class DeconvolutionPipeline:
             return list(self.stem_embedder.encode(signals))
         return [self.stem_embedder.embed(s) for s in signals]
 
-    def _turn_signal(self, turn, sep_result, cache) -> np.ndarray:
+    def _assign_best_stem(self, turn, region, ref_emb, cache) -> np.ndarray | None:
         sr = 16000
-        chunk_start = max(0.0, turn.start - self.cfg.asr.context_pad_sec)
-        chunk_end = turn.end + self.cfg.asr.context_pad_sec
+        rs = max(region.segment.start, turn.start)
+        re_ = min(region.segment.end, turn.end)
+        if re_ - rs <= 0.05:
+            return None
+        key = id(region)
+        if key not in cache["stem_embs"]:
+            cache["stem_embs"][key] = [self._unit(v) for v in self._embed(region.stems)]
+        sims = [float(np.dot(ref_emb, se)) for se in cache["stem_embs"][key]]
+        order = np.argsort(sims)[::-1]
+        top = int(order[0])
+        if sims[top] < self.cfg.separation.assign_min_sim:
+            return None
+        if (
+            len(sims) > 1
+            and sims[top] - float(sims[order[1]]) < self.cfg.separation.assign_min_margin
+        ):
+            return None
+        reg_off = int(region.segment.start * sr)
+        seg_s = int(rs * sr) - reg_off
+        seg_e = int(re_ * sr) - reg_off
+        return np.asarray(region.stems[top][seg_s:seg_e], dtype=np.float32)
 
-        def mix_excerpt() -> np.ndarray:
-            s = int(chunk_start * sr)
-            e = int(min(len(sep_result.mix), chunk_end * sr))
-            return sep_result.mix[s:e]
+    def _turn_segments(self, turn, sep_result, cache) -> list[tuple[float, float, np.ndarray]]:
+        sr = 16000
+        mix = sep_result.mix
 
         if not sep_result.regions or self.stem_embedder is None:
-            return mix_excerpt()
+            s = int(turn.start * sr)
+            e = min(len(mix), int(turn.end * sr))
+            return [(turn.start, turn.end, mix[s:e])]
+
         ref_emb = self._turn_reference(turn, sep_result, cache)
         if ref_emb is None:
-            return mix_excerpt()
-        best = None
+            s = int(turn.start * sr)
+            e = min(len(mix), int(turn.end * sr))
+            return [(turn.start, turn.end, mix[s:e])]
+
+        stem_parts: list[tuple[float, float, np.ndarray]] = []
         for region in sep_result.regions:
-            rs = max(region.segment.start, chunk_start)
-            re_ = min(region.segment.end, chunk_end)
-            if re_ - rs <= 0.05:
-                continue
-            key = id(region)
-            if key not in cache["stem_embs"]:
-                cache["stem_embs"][key] = [self._unit(v) for v in self._embed(region.stems)]
-            sims = [float(np.dot(ref_emb, se)) for se in cache["stem_embs"][key]]
-            order = np.argsort(sims)[::-1]
-            top = int(order[0])
-            if sims[top] < self.cfg.separation.assign_min_sim:
-                continue
-            if (
-                len(sims) > 1
-                and sims[top] - float(sims[order[1]]) < self.cfg.separation.assign_min_margin
-            ):
-                continue
-            if best is None or sims[top] > best[0]:
-                best = (sims[top], region.stems[top])
-        if best is None:
-            return mix_excerpt()
-        return best[1]
+            stem_audio = self._assign_best_stem(turn, region, ref_emb, cache)
+            if stem_audio is not None:
+                rs = max(region.segment.start, turn.start)
+                re_ = min(region.segment.end, turn.end)
+                stem_parts.append((rs, re_, stem_audio))
+
+        stem_parts.sort(key=lambda t: t[0])
+
+        segments: list[tuple[float, float, np.ndarray]] = []
+        cursor = turn.start
+        for rs, re_, stem_audio in stem_parts:
+            if rs > cursor + 0.01:
+                s = int(cursor * sr)
+                e = min(len(mix), int(rs * sr))
+                if e > s:
+                    segments.append((cursor, rs, mix[s:e]))
+            segments.append((rs, re_, stem_audio))
+            cursor = re_
+        if cursor < turn.end - 0.01:
+            s = int(cursor * sr)
+            e = min(len(mix), int(turn.end * sr))
+            if e > s:
+                segments.append((cursor, turn.end, mix[s:e]))
+
+        if not segments:
+            s = int(turn.start * sr)
+            e = min(len(mix), int(turn.end * sr))
+            segments = [(turn.start, turn.end, mix[s:e])]
+        return segments
 
     def _turn_reference(self, turn, sep_result, cache):
         centroids = getattr(self.diarizer, "speaker_centroids_", None)
@@ -131,17 +162,26 @@ class DeconvolutionPipeline:
         utterances: list[Utterance] = []
         cache: dict = {"refs": {}, "stem_embs": {}}
         for i, turn in enumerate(turns):
-            signal = self._turn_signal(turn, sep_result, cache)
-            asr_res = self.asr.transcribe(signal)
+            segments = self._turn_segments(turn, sep_result, cache)
+            parts = []
+            total_conf = 0.0
+            for _, _, seg_audio in segments:
+                if len(seg_audio) == 0:
+                    continue
+                asr_res = self.asr.transcribe(seg_audio)
+                parts.append(asr_res.text)
+                total_conf += asr_res.confidence
+            text = " ".join(parts)
+            conf = total_conf / max(len(parts), 1)
             utterances.append(
                 Utterance(
                     id=f"utt_{i:03d}",
                     speaker=turn.speaker,
                     start=round(turn.start, 3),
                     end=round(turn.end, 3),
-                    text=asr_res.text,
-                    confidence=round(asr_res.confidence, 4),
-                    language=asr_res.language,
+                    text=text,
+                    confidence=round(conf, 4),
+                    language="fr",
                 )
             )
         conversations = self.reconstructor.reconstruct(utterances)

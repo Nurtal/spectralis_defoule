@@ -126,9 +126,13 @@ def test_overlap_turns_get_assigned_stems():
     asr = RecordingAsr()
     result = make_result(asr, MixSeparator())
     assert len(result.utterances) == 2
-    assert result.utterances[0].text == "low"
-    assert result.utterances[1].text == "high"
-    assert all(len(x) <= SR for x in asr.inputs)
+    turn0_parts = [np.asarray(x) for x in asr.inputs[:2]]
+    assert len(turn0_parts) == 2
+    assert float(np.mean(turn0_parts[0] ** 2)) < 0.01
+    assert float(np.mean(turn0_parts[1] ** 2)) > 0.1
+    assert all(len(x) <= SR for x in asr.inputs[:2])
+    assert "high" in result.utterances[0].text
+    assert "low" in result.utterances[0].text
 
 
 def test_unassigned_turn_keeps_mix_audio():
