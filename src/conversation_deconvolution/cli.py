@@ -54,6 +54,86 @@ def run(
 
 
 @app.command()
+def demo(
+    input: Path = typer.Argument(..., exists=True),
+    output: Path = typer.Option("out.json", "--output", "-o"),
+    config_path: Path = typer.Option(None, "--config", "-c"),
+    num_speakers: int = typer.Option(None, "--num-speakers", "-n"),
+    plot: Path = typer.Option(None, "--plot", "-p"),
+    separate: bool = typer.Option(None, "--separate/--no-separate"),
+    reconstructor: str = typer.Option(None, "--reconstructor", "-r"),
+    diarization_backend: str = typer.Option("custom", "--diarization-backend"),
+):
+    """Démonstration interactive : traiter un fichier audio et afficher
+    un résumé complet des résultats (locuteurs, timeline, transcriptions,
+    conversations, export)."""
+    cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
+    if num_speakers:
+        cfg.diarization.num_speakers = num_speakers
+    if separate is not None:
+        cfg.separation.enabled = separate
+    if reconstructor is not None:
+        cfg.reconstructor_kind = reconstructor
+    if diarization_backend not in ("custom", "pyannote"):
+        raise typer.BadParameter("--diarization-backend: custom|pyannote")
+    cfg.diarization.backend = diarization_backend
+    from conversation_deconvolution.conversation.viz import plot_timeline
+    from conversation_deconvolution.pipeline import build_pipeline
+
+    pipeline = build_pipeline(cfg)
+    with console.status("[bold green]Traitement audio…"):
+        result = pipeline.run_file(input, output)
+    console.print(
+        f"[green]✓[/green] {len(result.utterances)} énoncés, "
+        f"{len(result.conversations)} conversations → {output}"
+    )
+    if plot:
+        plot_timeline(result, plot, title=Path(input).name)
+        console.print(f"[green]✓[/green] timeline → {plot}")
+
+    # Tableau récapitulatif des locuteurs
+    speaker_table = Table(title="Locuteurs", show_header=True, box=box.SQUARE)
+    speakers = sorted(
+        {u.speaker for c in result.conversations for u in c.utterances if u.speaker}
+    )
+    speaker_table.add_column("Locuteur")
+    speaker_table.add_column("Nombre d'interventions")
+    for spk in speakers:
+        count = sum(
+            1 for c in result.conversations for u in c.utterances if u.speaker == spk
+        )
+        speaker_table.add_row(spk, str(count))
+    console.print(speaker_table)
+
+    # Tableau des conversations
+    conv_table = Table(title="Conversations", show_header=True, box=box.SQUARE)
+    conv_table.add_column("ID")
+    conv_table.add_column("Participants")
+    conv_table.add_column("Utterances")
+    for i, conv in enumerate(result.conversations, start=1):
+        participants = ", ".join(conv.participants) if conv.participants else "Inconnu"
+        n_utt = len(conv.utterances)
+        conv_table.add_row(f"conversation_{i:02d}", participants, str(n_utt))
+    console.print(conv_table)
+
+    # Résumé des transcriptions
+    trans_table = Table(title="Transcriptions sélectionnées", show_header=True, box=box.SQUARE)
+    trans_table.add_column("Utterance")
+    trans_table.add_column("Locuteur")
+    trans_table.add_column("Timestamps")
+    trans_table.add_column("Texte")
+    for conv in result.conversations:
+        for u in conv.utterances[:3]:  # first 3 per conversation
+            tstamp = f"{u.start:.1f}s–{u.end:.1f}s"
+            trans_table.add_row(u.text[:60], u.speaker or "?", tstamp, "")
+    console.print(trans_table)
+
+    console.print(
+        f"\n[italic]Résultats exportés vers[/italic] [bold]{output}[/bold]"
+    )
+
+
+@app.command()
 def synth(
     out_dir: Path = typer.Option("data/synthetic/sample", "--out", "-o"),
     conversations: int = typer.Option(2, "--conversations"),

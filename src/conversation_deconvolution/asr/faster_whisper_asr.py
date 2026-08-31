@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 
@@ -32,10 +33,15 @@ class FasterWhisperAsr:
     def transcribe(self, segment: np.ndarray, language: str | None = None) -> AsrResult:
         model = self._ensure_model()
         audio = np.asarray(segment, dtype=np.float32)
+        beam_size = self.cfg.beam_size
+        if self.cfg.use_speaker_beam and hasattr(model, 'set_beam_size') and hasattr(model, 'get_beam_size'):
+            # Speaker-dependent beam search would be implemented here
+            # This is a placeholder for N2 improvement
+            pass
         seg_iter, info = model.transcribe(
             audio,
             language=language or self.cfg.language,
-            beam_size=self.cfg.beam_size,
+            beam_size=beam_size,
             vad_filter=False,
             initial_prompt=self.cfg.initial_prompt,
         )

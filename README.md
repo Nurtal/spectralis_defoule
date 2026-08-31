@@ -729,8 +729,12 @@ Structure détaillée : `docs/superpowers/specs/` (design), `docs/adr/`
 
 **Projet :** expérimental / R&D
 
-**Phase actuelle :** Phases 0→5 implémentées (baseline mesurable) ;
+**Phase actuelle :** Phases 0→6 implémentées (baseline mesurable + robustesse) ;
 M6 clôturé (ADR-0009, code conservé derrière `--reconstructor graph`) ;
+M7 implémenté : infrastructure de test de robustness (SNR, nombre de locuteurs,
+qualité audio, reproductibilité) ;
+M8 CLI enrichie : commande `demo` avec résumé parlé, tableaux de locuteurs,
+transcriptions et visualisation timeline ;
 N4 : séparation ON évaluée (splice in-place, ADR-0008 renforcé) — trois
 variantes ASR-par-tige dégradent WER overlap vs OFF, verdict OFF maintenu ;
 N3 fait (normalisation WER) ; reconstructor optimisé (F1 0,651, ARI 0,480) ;

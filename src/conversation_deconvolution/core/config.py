@@ -43,6 +43,7 @@ class AsrConfig:
     language: str | None = "fr"
     beam_size: int = 1
     initial_prompt: str | None = None
+    use_speaker_beam: bool = False
 
 
 @dataclass
