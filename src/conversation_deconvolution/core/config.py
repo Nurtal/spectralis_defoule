@@ -78,6 +78,25 @@ class GraphConfig:
 
 
 @dataclass
+class TseConfig:
+    model_path: str = "models/tse/model.pt"
+    hparams_path: str = "models/tse/hparams.yaml"
+    n_fft: int = 512
+    hop: int = 256
+    window: str = "hann"
+    n_blocks: int = 3
+    channels: int = 64
+    embed_dim: int = 192
+    lr: float = 3e-4
+    grad_clip: float = 1.0
+    epochs: int = 30
+    batch_size: int = 4
+    snr_low: float = 10.0
+    snr_high: float = 20.0
+    noise_bandwidth: float = 3400.0
+
+
+@dataclass
 class PipelineConfig:
     vad: VadConfig = field(default_factory=VadConfig)
     diarization: DiarizationConfig = field(default_factory=DiarizationConfig)
@@ -86,6 +105,7 @@ class PipelineConfig:
     reconstruction: ReconstructionConfig = field(default_factory=ReconstructionConfig)
     synthetic: SyntheticConfig = field(default_factory=SyntheticConfig)
     graph: GraphConfig = field(default_factory=GraphConfig)
+    tse: TseConfig = field(default_factory=TseConfig)
     text_embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
     reconstructor_kind: str = "heuristic"
 
@@ -106,6 +126,7 @@ class PipelineConfig:
             "reconstruction": ReconstructionConfig,
             "synthetic": SyntheticConfig,
             "graph": GraphConfig,
+            "tse": TseConfig,
         }
         kwargs: dict = {}
         for key, value in raw.items():

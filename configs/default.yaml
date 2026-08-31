@@ -46,5 +46,21 @@ graph:
   resolution: 1.0
   seed: 0
   negative_ratio: 3.0
+tse:
+  model_path: models/tse/model.pt
+  hparams_path: models/tse/hparams.yaml
+  n_fft: 512
+  hop: 256
+  window: hann
+  n_blocks: 3
+  channels: 64
+  embed_dim: 192
+  lr: 3e-4
+  grad_clip: 1.0
+  epochs: 30
+  batch_size: 4
+  snr_low: 10.0
+  snr_high: 20.0
+  noise_bandwidth: 3400.0
 reconstructor_kind: heuristic
 text_embedding_model: paraphrase-multilingual-MiniLM-L12-v2

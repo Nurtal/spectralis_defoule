@@ -80,6 +80,22 @@ def test_asr_beam_and_prompt_from_yaml(tmp_path):
     assert cfg.asr.initial_prompt == "Conversation technique en francais."
 
 
+def test_tse_section_loads(tmp_path):
+    p = tmp_path / "t.yaml"
+    p.write_text("tse:\n  model_path: models/tse/model.pt\n  lr: 0.0001\n")
+    cfg = PipelineConfig.from_yaml(p)
+    assert cfg.tse.model_path == "models/tse/model.pt"
+    assert cfg.tse.lr == 0.0001
+
+
+def test_tse_defaults():
+    cfg = PipelineConfig.default()
+    assert cfg.tse.n_fft == 512
+    assert cfg.tse.lr == 3e-4
+    assert cfg.tse.epochs == 30
+    assert cfg.tse.model_path == "models/tse/model.pt"
+
+
 def test_faster_whisper_asr_passes_beam_and_prompt(monkeypatch):
     from conversation_deconvolution.asr.faster_whisper_asr import FasterWhisperAsr
     from conversation_deconvolution.core.config import AsrConfig
