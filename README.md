@@ -737,7 +737,7 @@ Structure détaillée : `docs/superpowers/specs/` (design), `docs/adr/`
 
 **Phase actuelle :** Phases 0→6 implémentées (baseline mesurable + robustesse) ;
 M6 clôturé (ADR-0009, code conservé derrière `--reconstructor graph`) ;
-M6b — TSE : modèle STFT-FiLM conditionné ECAPA (~1.2M params, n_fft 512 hop 256 3 blocs FiLM), entraînement `deconvolute train-tse`, backend activable `--separation-backend tse`. Séparation N speakers ; OFF maintenu par défaut (ADR-0008/0011) ;
+M6b — TSE : modèle STFT-FiLM magnitude + FiLM linéaire + cond_conv (339k `64ch` / 1.2M `128ch`, n_fft 512 hop 256 3 blocs), entraînement `deconvolute train-tse` (voice shuffle per-batch), backend `--separation-backend tse`. **Validé marginalement 10ep : WERo 0.776 < OFF 0.803 (+0.027, 4ds)** mais OFF maintenu (ADR-0011, gain faible, stems corr 0.99) ;
 M7 implémenté : infrastructure de test de robustness (SNR, nombre de locuteurs,
 qualité audio, reproductibilité) ;
 M8 CLI enrichie : commande `demo` avec résumé parlé, tableaux de locuteurs,

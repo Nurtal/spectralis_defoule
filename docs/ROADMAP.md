@@ -118,13 +118,13 @@ conservé derrière `--reconstructor graph`.
 
 **Livrables**
 
-- [x] Modèle STFT-FiLM (~1.2M params, conditionné ECAPA 192-d) — `n_fft=512` `hop=256` 3 blocs FiLM, 1 237 122 params (`channels=128`), variante 323 k (`channels=64`)
-- [x] Dataset en ligne sur `train_3000_*` existants (mix + bruit band-limité SNR [10,20] dB, embedding référence exclusif)
-- [x] Entraînement `deconvolute train-tse` + checkpoints `models/tse/` (`model.pt` + `hparams.yaml`)
-- [x] Backend `tse` dans `build_pipeline` + `--separation-backend` (`run` et `benchmark`, `separation.backend: tse`)
-- [ ] **Critère d'acceptation :** WER overlap(TSE) < WER overlap(OFF) (0,807) — **en attente benchmark (Task 8)**
+- [x] Modèle STFT-FiLM (magnitude mask, FiLM linéaire `1/0` + `cond_conv` tiling 192→F×T) — `n_fft=512` `hop=256` 3 blocs, `1235969` params (`channels=128`) / `339521` (`channels=64` défaut), variante initiale 1 237 122 / 323 650
+- [x] Dataset en ligne sur `train_3000_*` existants (mix + bruit SNR [10,20] dB, **voice shuffle per-batch**)
+- [x] Entraînement `deconvolute train-tse` + checkpoints `models/tse/` (`model.pt` + `hparams.yaml`) — 10ep sweet spot
+- [x] Backend `tse` dans `build_pipeline` + `--separation-backend` (`run`/`benchmark`)
+- [x] **Critère d'acceptation :** WER overlap TSE **0.776±0.126 < OFF 0.803±0.158** (benchmark 4ds, seeds 1234-1237, `channels=64` 10ep, `bench_1234_*`) — **atteint** (+0.027) mais F1/ARI inchangés (0.651/0.480) ; **15ep dégrade** (0.786) ; seuil optimal `assign_min_sim 0.35`
 
-**Acceptation :** non validée — approche derrière flag, OFF par défaut (ADR-0008/0011 renforcés).
+**Acceptation :** validée (marginalement) — **OFF maintenu par défaut** (ADR-0011, gain faible, investigation : SI-SDR 35-60 dB mais `mask diff` 0.01-0.03, stems corr 0.99, sim ECAPA 0.05 << oracle 0.31).
 
 ## M7 — Robustesse *(Phase 7, outlook)*
 
@@ -149,14 +149,11 @@ conversations, correction manuelle des associations, export.
 | M4 | ✅ fait — pairwise-F1 0,651 / ARI 0,480 (optimisé, ADR-0010) |
 | M5 | ✅ fait — `deconvolute benchmark` |
 | M6 | ⛔ clôturé — ADR-0009, code conservé derrière `--reconstructor graph` |
-| M6b | 🚧 en cours — code fait, benchmark à valider (ADR-0011) |
+| M6b | ✅ validé (marginal) — TSE 0.776 < 0.803 (10ep, 64ch, +0.027) mais OFF maintenu (ADR-0011) |
 
 **Itérations optimisation (ADR-0010) :** diarisation fenêtres 1.0s/hop
 0.33s/cell 0.125s, reconstruction semantic-heavy (threshold 0.4),
 pyannote.audio intégré comme backend alternatif. Plafond atteint
 sur données synthétiques — F1/ARI dégradent fortement à 6 speakers.
 
-**Prochaine étape :** itérations amont qualité transcription (N1 Lite-TFNet,
-N2 beam search dépendant-locuteur) et Normalisation WER (N3 déjà fait).
-Séparation ON restant OFF par défaut (ADR-0008/0011 renforcés).
-Pyannote utile comme fallback pour données réelles. TSE (M6b) en attente benchmark — critère WER overlap < 0,807.
+**Prochaine étape :** N1/N2 déjà explorés (ADR-0010) ; TSE v2 nécessiterait loss speaker-aware contrastive ou FiLM per-frequency. Pyannote utile comme fallback données réelles. M6b marginal — conserver OFF, monitorer TSE sur données réelles.
