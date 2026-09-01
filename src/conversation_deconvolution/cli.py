@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import typer
+from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -27,6 +28,7 @@ def run(
     separate: bool = typer.Option(None, "--separate/--no-separate"),
     reconstructor: str = typer.Option(None, "--reconstructor", "-r"),
     diarization_backend: str = typer.Option("custom", "--diarization-backend"),
+    separation_backend: str | None = typer.Option(None, "--separation-backend"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if num_speakers:
@@ -38,6 +40,11 @@ def run(
     if diarization_backend not in ("custom", "pyannote"):
         raise typer.BadParameter("--diarization-backend: custom|pyannote")
     cfg.diarization.backend = diarization_backend
+    if separation_backend is not None:
+        if separation_backend not in ("passthrough", "sepformer", "tse"):
+            raise typer.BadParameter("--separation-backend: passthrough|sepformer|tse")
+        cfg.separation.backend = separation_backend
+        cfg.separation.enabled = separation_backend != "passthrough"
     from conversation_deconvolution.conversation.viz import plot_timeline
     from conversation_deconvolution.pipeline import build_pipeline
 
@@ -99,9 +106,7 @@ def demo(
     speaker_table.add_column("Locuteur")
     speaker_table.add_column("Nombre d'interventions")
     for spk in speakers:
-        count = sum(
-            1 for c in result.conversations for u in c.utterances if u.speaker == spk
-        )
+        count = sum(1 for c in result.conversations for u in c.utterances if u.speaker == spk)
         speaker_table.add_row(spk, str(count))
     console.print(speaker_table)
 
@@ -128,9 +133,7 @@ def demo(
             trans_table.add_row(u.text[:60], u.speaker or "?", tstamp, "")
     console.print(trans_table)
 
-    console.print(
-        f"\n[italic]Résultats exportés vers[/italic] [bold]{output}[/bold]"
-    )
+    console.print(f"\n[italic]Résultats exportés vers[/italic] [bold]{output}[/bold]")
 
 
 @app.command()
@@ -182,6 +185,7 @@ def benchmark(
     separate: bool = typer.Option(None, "--separate/--no-separate"),
     reconstructor: str = typer.Option("heuristic", "--reconstructor"),
     diarization_backend: str = typer.Option("custom", "--diarization-backend"),
+    separation_backend: str | None = typer.Option(None, "--separation-backend"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if separate is not None:
@@ -189,6 +193,11 @@ def benchmark(
     if diarization_backend not in ("custom", "pyannote"):
         raise typer.BadParameter("--diarization-backend: custom|pyannote")
     cfg.diarization.backend = diarization_backend
+    if separation_backend is not None:
+        if separation_backend not in ("passthrough", "sepformer", "tse"):
+            raise typer.BadParameter("--separation-backend: passthrough|sepformer|tse")
+        cfg.separation.backend = separation_backend
+        cfg.separation.enabled = separation_backend != "passthrough"
     kinds = {
         "both": ["heuristic", "graph"],
         "heuristic": ["heuristic"],
@@ -254,6 +263,37 @@ def train(
         f"[green]✓[/green] classifieur entraîné "
         f"({len(y)} paires, F1 arêtes CV={model['meta']['pairwise_cv_f1']:.3f}) → {out}"
     )
+
+
+@app.command()
+def train_tse(
+    datasets: int = typer.Option(8, "--datasets"),
+    epochs: int = typer.Option(30, "--epochs"),
+    out: Path = typer.Option(Path("models/tse/model.pt"), "--out"),
+    config_path: Path | None = typer.Option(None, "--config", "-c"),
+    seed_base: int = typer.Option(3000, "--seed-base"),
+):
+    cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
+    cfg.tse.epochs = epochs
+    from conversation_deconvolution.synthetic.tts import PiperTts
+    from conversation_deconvolution.tse.dataset import TseDataset
+    from conversation_deconvolution.tse.train import train_tse_model
+
+    tts = PiperTts()
+    dirs = sorted(Path("data/synthetic").glob(f"train_{seed_base}_*"))
+    if not dirs:
+        dirs = sorted(Path("data/synthetic").glob("train_3000_*"))
+    if not dirs:
+        console.print(
+            "[red]✗[/red] aucun dataset train_3000_* trouvé — générez-en avec"
+            " `deconvolute synth`"
+        )
+        return
+    if len(dirs) > datasets:
+        dirs = dirs[:datasets]
+    dataset = TseDataset(tts, cfg.tse, dirs)
+    model_path = train_tse_model(dataset, cfg.tse, str(out))
+    console.print(f"[green]✓[/green] modèle TSE → {model_path}")
 
 
 @app.command()

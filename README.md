@@ -714,6 +714,12 @@ uv run deconvolute synth --out data/synthetic/sample --seed 0
 uv run deconvolute run data/synthetic/sample/mixed.wav \
     -o out.json -n 4 -p timeline.png
 
+# entraîner le modèle TSE (~2-3h GPU, 8 datasets seedés)
+uv run deconvolute train-tse --epochs 30 --out models/tse/model.pt
+# pipeline avec séparation TSE
+uv run deconvolute run meeting.wav -o out.json --separate --separation-backend tse
+# ou via config: separation.backend: tse
+
 # évaluer une prédiction contre la vérité terrain
 uv run deconvolute evaluate -p out.json -g data/synthetic/sample/ground_truth.json
 
@@ -731,6 +737,7 @@ Structure détaillée : `docs/superpowers/specs/` (design), `docs/adr/`
 
 **Phase actuelle :** Phases 0→6 implémentées (baseline mesurable + robustesse) ;
 M6 clôturé (ADR-0009, code conservé derrière `--reconstructor graph`) ;
+M6b — TSE : modèle STFT-FiLM conditionné ECAPA (~1.2M params, n_fft 512 hop 256 3 blocs FiLM), entraînement `deconvolute train-tse`, backend activable `--separation-backend tse`. Séparation N speakers ; OFF maintenu par défaut (ADR-0008/0011) ;
 M7 implémenté : infrastructure de test de robustness (SNR, nombre de locuteurs,
 qualité audio, reproductibilité) ;
 M8 CLI enrichie : commande `demo` avec résumé parlé, tableaux de locuteurs,

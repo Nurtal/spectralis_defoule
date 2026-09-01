@@ -114,6 +114,18 @@ reproductible (même seed ⇒ mêmes chiffres).
 **Acceptation :** non validée — approche rejetée comme défaut, code
 conservé derrière `--reconstructor graph`.
 
+## M6b — Target Speaker Extraction *(Phase 6, ADR-0011)*
+
+**Livrables**
+
+- [x] Modèle STFT-FiLM (~1.2M params, conditionné ECAPA 192-d) — `n_fft=512` `hop=256` 3 blocs FiLM, 1 237 122 params (`channels=128`), variante 323 k (`channels=64`)
+- [x] Dataset en ligne sur `train_3000_*` existants (mix + bruit band-limité SNR [10,20] dB, embedding référence exclusif)
+- [x] Entraînement `deconvolute train-tse` + checkpoints `models/tse/` (`model.pt` + `hparams.yaml`)
+- [x] Backend `tse` dans `build_pipeline` + `--separation-backend` (`run` et `benchmark`, `separation.backend: tse`)
+- [ ] **Critère d'acceptation :** WER overlap(TSE) < WER overlap(OFF) (0,807) — **en attente benchmark (Task 8)**
+
+**Acceptation :** non validée — approche derrière flag, OFF par défaut (ADR-0008/0011 renforcés).
+
 ## M7 — Robustesse *(Phase 7, outlook)*
 
 Bruit réaliste, réverbération (RIR), interruptions intra-conversation,
@@ -137,6 +149,7 @@ conversations, correction manuelle des associations, export.
 | M4 | ✅ fait — pairwise-F1 0,651 / ARI 0,480 (optimisé, ADR-0010) |
 | M5 | ✅ fait — `deconvolute benchmark` |
 | M6 | ⛔ clôturé — ADR-0009, code conservé derrière `--reconstructor graph` |
+| M6b | 🚧 en cours — code fait, benchmark à valider (ADR-0011) |
 
 **Itérations optimisation (ADR-0010) :** diarisation fenêtres 1.0s/hop
 0.33s/cell 0.125s, reconstruction semantic-heavy (threshold 0.4),
@@ -145,6 +158,5 @@ sur données synthétiques — F1/ARI dégradent fortement à 6 speakers.
 
 **Prochaine étape :** itérations amont qualité transcription (N1 Lite-TFNet,
 N2 beam search dépendant-locuteur) et Normalisation WER (N3 déjà fait).
-Séparation ON restant OFF par défaut (ADR-0008 renforcé par N4).
-Pyannote utile comme fallback pour données réelles.
-réels).
+Séparation ON restant OFF par défaut (ADR-0008/0011 renforcés).
+Pyannote utile comme fallback pour données réelles. TSE (M6b) en attente benchmark — critère WER overlap < 0,807.

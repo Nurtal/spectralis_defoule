@@ -1,5 +1,4 @@
 import torch
-import pytest
 
 from conversation_deconvolution.tse.model import TseModel, _si_sdr
 
@@ -18,6 +17,7 @@ def test_forward_shapes():
 
 def test_loss_reduces():
     import math
+
     model = TseModel(n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3)
     model.eval()
     mix = torch.randn(1, 16000)

@@ -1,6 +1,5 @@
 import math
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 
@@ -34,7 +33,11 @@ class FasterWhisperAsr:
         model = self._ensure_model()
         audio = np.asarray(segment, dtype=np.float32)
         beam_size = self.cfg.beam_size
-        if self.cfg.use_speaker_beam and hasattr(model, 'set_beam_size') and hasattr(model, 'get_beam_size'):
+        if (
+            self.cfg.use_speaker_beam
+            and hasattr(model, "set_beam_size")
+            and hasattr(model, "get_beam_size")
+        ):
             # Speaker-dependent beam search would be implemented here
             # This is a placeholder for N2 improvement
             pass

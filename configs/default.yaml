@@ -12,7 +12,9 @@ diarization:
   cell_sec: 0.125
 separation:
   enabled: false
+  backend: sepformer
   model_name: speechbrain/sepformer-whamr16k
+  model_path: models/tse/model.pt
   device: null
   min_region_sec: 0.4
   pad_sec: 0.25

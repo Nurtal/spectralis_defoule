@@ -60,10 +60,18 @@ class DeconvolutionPipeline:
         re_ = min(region.segment.end, turn.end)
         if re_ - rs <= 0.05:
             return None
+        if not region.stems:
+            return None
         key = id(region)
         if key not in cache["stem_embs"]:
             cache["stem_embs"][key] = [self._unit(v) for v in self._embed(region.stems)]
+        if not cache["stem_embs"][key]:
+            return None
+        if len(ref_emb) != len(cache["stem_embs"][key][0]):
+            return None
         sims = [float(np.dot(ref_emb, se)) for se in cache["stem_embs"][key]]
+        if not sims:
+            return None
         order = np.argsort(sims)[::-1]
         top = int(order[0])
         if sims[top] < self.cfg.separation.assign_min_sim:
@@ -131,6 +139,12 @@ class DeconvolutionPipeline:
         norm = float(np.linalg.norm(v)) or 1.0
         return v / norm
 
+    def _build_speaker_refs(self) -> dict | None:
+        centroids = getattr(self.diarizer, "speaker_centroids_", None)
+        if not centroids:
+            return None
+        return {str(k): v for k, v in centroids.items()}
+
     def run(self, audio: np.ndarray) -> TranscriptResult:
         from conversation_deconvolution.diarization.timeline import overlap_regions
 
@@ -139,7 +153,14 @@ class DeconvolutionPipeline:
         overlaps = getattr(self.diarizer, "overlap_regions_", None)
         if overlaps is None:
             overlaps = overlap_regions(turns)
-        sep_result = self.separator.separate(audio, overlaps)
+        speaker_refs = self._build_speaker_refs()
+        try:
+            sep_result = self.separator.separate(audio, overlaps, speaker_refs=speaker_refs)
+        except TypeError as exc:
+            if "speaker_refs" in str(exc):
+                sep_result = self.separator.separate(audio, overlaps)
+            else:
+                raise
 
         utterances: list[Utterance] = []
         cache: dict = {"refs": {}, "stem_embs": {}}
@@ -211,6 +232,7 @@ def build_pipeline(config: PipelineConfig) -> DeconvolutionPipeline:
 
         token = os.environ.get("HF_TOKEN", "")
         diarizer = PyannoteDiarizer(token=token)
+        embedder = EcapaEmbedder()
     else:
         vad = SileroVad(config.vad)
         embedder = EcapaEmbedder()
@@ -218,11 +240,32 @@ def build_pipeline(config: PipelineConfig) -> DeconvolutionPipeline:
         diarizer = SpeakerDiarizer(vad, embedder, clusterer, config.diarization)
     text_embedder = SentenceTransformerEmbedder(config.text_embedding_model)
     reconstructor = build_reconstructor(config, text_embedder)
-    separator = (
-        SepformerSeparator(config.separation)
-        if config.separation.enabled
-        else PassthroughSeparator()
-    )
+    if config.separation.backend == "tse":
+        import torch
+
+        from conversation_deconvolution.separation.tse_separator import TseSeparator
+        from conversation_deconvolution.tse.model import TseModel
+
+        tse_cfg = config.tse
+        model = TseModel(
+            n_fft=tse_cfg.n_fft,
+            hop=tse_cfg.hop,
+            window=tse_cfg.window,
+            channels=tse_cfg.channels,
+            embed_dim=tse_cfg.embed_dim,
+            n_blocks=tse_cfg.n_blocks,
+        )
+        try:
+            state = torch.load(tse_cfg.model_path, map_location="cpu")
+            model.load_state_dict(state, strict=False)
+        except Exception:  # noqa: BLE001, S110
+            pass
+        model.eval()
+        separator = TseSeparator(tse_cfg, model)
+    elif config.separation.enabled:
+        separator = SepformerSeparator(config.separation)
+    else:
+        separator = PassthroughSeparator()
     return DeconvolutionPipeline(
         diarizer=diarizer,
         separator=separator,

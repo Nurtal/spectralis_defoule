@@ -1,6 +1,6 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 def _stft(mix, n_fft=512, hop=256, window="hann"):
@@ -13,7 +13,9 @@ def _stft(mix, n_fft=512, hop=256, window="hann"):
 
 def _istft(masked_spec, mix, n_fft=512, hop=256, window="hann"):
     win = torch.hann_window(n_fft, device=masked_spec.device)
-    return torch.istft(masked_spec, n_fft=n_fft, hop_length=hop, window=win, length=mix.shape[-1])
+    return torch.istft(
+        masked_spec, n_fft=n_fft, hop_length=hop, window=win, length=mix.shape[-1]
+    )
 
 
 class FilmBlock(nn.Module):
@@ -34,7 +36,9 @@ class FilmBlock(nn.Module):
 
 
 class TseModel(nn.Module):
-    def __init__(self, n_fft=512, hop=256, window="hann", n_blocks=3, channels=128, embed_dim=192):
+    def __init__(
+        self, n_fft=512, hop=256, window="hann", n_blocks=3, channels=128, embed_dim=192
+    ):
         super().__init__()
         self.n_fft = n_fft
         self.hop = hop
@@ -89,8 +93,8 @@ class TseModel(nn.Module):
 
 def _si_sdr(estimate, reference):
     eps = 1e-8
-    ref_energy = torch.sum(reference ** 2, dim=-1, keepdim=True) + eps
+    ref_energy = torch.sum(reference**2, dim=-1, keepdim=True) + eps
     proj = torch.sum(reference * estimate, dim=-1, keepdim=True)
     alpha = proj / ref_energy
     residual = estimate - alpha * reference
-    return 10 * torch.log10(ref_energy / (torch.sum(residual ** 2, dim=-1, keepdim=True) + eps))
+    return 10 * torch.log10(ref_energy / (torch.sum(residual**2, dim=-1, keepdim=True) + eps))

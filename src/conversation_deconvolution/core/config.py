@@ -27,7 +27,9 @@ class DiarizationConfig:
 @dataclass
 class SeparationConfig:
     enabled: bool = False
+    backend: str = "sepformer"
     model_name: str = "speechbrain/sepformer-whamr16k"
+    model_path: str = "models/tse/model.pt"
     device: str | None = None
     min_region_sec: float = 0.4
     pad_sec: float = 0.25

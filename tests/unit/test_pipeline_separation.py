@@ -49,6 +49,13 @@ class FakeDiarizer:
         ], []
 
 
+class FakeTseDiarizer(FakeDiarizer):
+    speaker_centroids_: typing.ClassVar = {
+        0: _unit(np.random.default_rng(0).standard_normal(192)),
+        1: _unit(np.random.default_rng(1).standard_normal(192)),
+    }
+
+
 class LoudSeparator:
     def separate(self, mix, regions):
         assert regions and regions[0] == Segment(1.0, 2.0)
@@ -71,6 +78,21 @@ class BandEmbedder:
             v = np.zeros(self.dim)
             v[0] = float(np.mean(x * x))
             v[1] = float(np.mean(x**4))
+            n = np.linalg.norm(v) or 1.0
+            out.append(v / n)
+        return np.array(out)
+
+
+class FakeEcapaEmbedder:
+    dim = 192
+
+    def encode(self, signals):
+        out = []
+        for x in signals:
+            x = np.asarray(x, dtype=np.float64)
+            v = np.zeros(192)
+            v[0] = float(np.mean(x * x))
+            v[1] = float(np.mean(x**4)) if x.size else 0.0
             n = np.linalg.norm(v) or 1.0
             out.append(v / n)
         return np.array(out)
@@ -199,3 +221,236 @@ def test_diarizer_reported_overlaps_reach_separator():
     result = pipeline.run(np.zeros(3 * SR, dtype=np.float32))
     assert sep.seen == [Segment(1.0, 2.0)]
     assert result.overlaps == [Segment(1.0, 2.0)]
+
+
+def test_tse_backend_builds():
+    from conversation_deconvolution.core.config import TseConfig
+    from conversation_deconvolution.separation.tse_separator import TseSeparator
+    from conversation_deconvolution.tse.model import TseModel
+
+    cfg = TseConfig()
+    model = TseModel(
+        n_fft=cfg.n_fft,
+        hop=cfg.hop,
+        channels=cfg.channels,
+        embed_dim=cfg.embed_dim,
+        n_blocks=cfg.n_blocks,
+    )
+    model.eval()
+    sep = TseSeparator(cfg, model)
+    assert sep is not None
+    assert sep.cfg is cfg
+    assert sep.model is model
+
+
+def test_tse_separator_via_pipeline_produces_stems():
+    import torch
+
+    from conversation_deconvolution.conversation.reconstructor import (
+        HeuristicReconstructor,
+    )
+    from conversation_deconvolution.core.config import ReconstructionConfig, TseConfig
+    from conversation_deconvolution.pipeline import DeconvolutionPipeline
+    from conversation_deconvolution.separation.tse_separator import TseSeparator
+    from conversation_deconvolution.tse.model import TseModel
+
+    tse_cfg = TseConfig()
+    model = TseModel(
+        n_fft=tse_cfg.n_fft,
+        hop=tse_cfg.hop,
+        channels=tse_cfg.channels,
+        embed_dim=tse_cfg.embed_dim,
+        n_blocks=tse_cfg.n_blocks,
+    )
+    model.eval()
+    sep = TseSeparator(tse_cfg, model)
+    diarizer = FakeTseDiarizer()
+    asr = RecordingAsr()
+    pipeline = DeconvolutionPipeline(
+        diarizer=diarizer,
+        separator=sep,
+        asr=asr,
+        reconstructor=HeuristicReconstructor(_NullEmbedder(), ReconstructionConfig()),
+        config=_cfg(),
+        stem_embedder=FakeEcapaEmbedder(),
+    )
+    audio = np.zeros(3 * SR, dtype=np.float32)
+    with torch.no_grad():
+        result = pipeline.run(audio)
+    assert len(result.utterances) == 2
+    assert len(result.overlaps) == 1
+
+
+def test_build_speaker_refs_str_keys():
+    from conversation_deconvolution.pipeline import DeconvolutionPipeline
+
+    diarizer = FakeDiarizer()
+    pipeline = DeconvolutionPipeline(
+        diarizer=diarizer,
+        separator=LoudSeparator(),
+        asr=RecordingAsr(),
+        reconstructor=None,
+        config=_cfg(),
+        stem_embedder=None,
+    )
+    refs = pipeline._build_speaker_refs()
+    assert refs is not None
+    assert set(refs.keys()) == {"0", "1"}
+    for k, v in refs.items():
+        assert isinstance(k, str)
+        assert isinstance(v, np.ndarray)
+
+
+def test_build_speaker_refs_none_without_centroids():
+    from conversation_deconvolution.pipeline import DeconvolutionPipeline
+
+    class NoCentroidDiarizer(FakeDiarizer):
+        speaker_centroids_ = None
+
+    pipeline = DeconvolutionPipeline(
+        diarizer=NoCentroidDiarizer(),
+        separator=LoudSeparator(),
+        asr=RecordingAsr(),
+        reconstructor=None,
+        config=_cfg(),
+        stem_embedder=None,
+    )
+    assert pipeline._build_speaker_refs() is None
+
+    class EmptyCentroidDiarizer(FakeDiarizer):
+        speaker_centroids_: typing.ClassVar = {}
+
+    pipeline2 = DeconvolutionPipeline(
+        diarizer=EmptyCentroidDiarizer(),
+        separator=LoudSeparator(),
+        asr=RecordingAsr(),
+        reconstructor=None,
+        config=_cfg(),
+        stem_embedder=None,
+    )
+    assert pipeline2._build_speaker_refs() is None
+
+
+def test_pipeline_passes_speaker_refs_to_separator():
+    from conversation_deconvolution.conversation.reconstructor import (
+        HeuristicReconstructor,
+    )
+    from conversation_deconvolution.core.config import ReconstructionConfig
+    from conversation_deconvolution.pipeline import DeconvolutionPipeline
+
+    class CapturingTseSeparator:
+        def __init__(self):
+            self.seen_refs = None
+            self.seen_regions = None
+
+        def separate(self, mix, regions, speaker_refs=None):
+            self.seen_refs = speaker_refs
+            self.seen_regions = list(regions)
+            return SeparationResult(
+                mix=np.asarray(mix).copy(),
+                regions=[SeparatedRegion(segment=r, stems=[]) for r in regions],
+            )
+
+    sep = CapturingTseSeparator()
+    diarizer = FakeDiarizer()
+    pipeline = DeconvolutionPipeline(
+        diarizer=diarizer,
+        separator=sep,
+        asr=RecordingAsr(),
+        reconstructor=HeuristicReconstructor(_NullEmbedder(), ReconstructionConfig()),
+        config=_cfg(),
+        stem_embedder=BandEmbedder(),
+    )
+    pipeline.run(np.zeros(3 * SR, dtype=np.float32))
+    assert sep.seen_refs is not None
+    assert set(sep.seen_refs.keys()) == {"0", "1"}
+    assert sep.seen_regions == [Segment(1.0, 2.0)]
+
+
+def test_pipeline_fallback_for_separator_without_speaker_refs():
+    from conversation_deconvolution.conversation.reconstructor import (
+        HeuristicReconstructor,
+    )
+    from conversation_deconvolution.core.config import ReconstructionConfig
+    from conversation_deconvolution.pipeline import DeconvolutionPipeline
+
+    class OldSeparator:
+        def separate(self, mix, regions):
+            return SeparationResult(
+                mix=np.asarray(mix).copy(),
+                regions=[SeparatedRegion(segment=r, stems=[]) for r in regions],
+            )
+
+    pipeline = DeconvolutionPipeline(
+        diarizer=FakeDiarizer(),
+        separator=OldSeparator(),
+        asr=RecordingAsr(),
+        reconstructor=HeuristicReconstructor(_NullEmbedder(), ReconstructionConfig()),
+        config=_cfg(),
+        stem_embedder=BandEmbedder(),
+    )
+    result = pipeline.run(np.zeros(3 * SR, dtype=np.float32))
+    assert len(result.utterances) == 2
+
+
+def test_build_pipeline_tse_backend_without_checkpoint(monkeypatch, tmp_path):
+    from unittest.mock import MagicMock
+
+    import conversation_deconvolution.pipeline as pipe_mod
+    from conversation_deconvolution.core.config import PipelineConfig
+    from conversation_deconvolution.separation.tse_separator import TseSeparator
+
+    monkeypatch.setattr(
+        "conversation_deconvolution.audio.vad.SileroVad",
+        lambda cfg: MagicMock(),
+    )
+    monkeypatch.setattr(
+        "conversation_deconvolution.diarization.embeddings.EcapaEmbedder",
+        lambda: MagicMock(),
+    )
+    monkeypatch.setattr(
+        "conversation_deconvolution.diarization.clusterer.AgglomerativeClusterer",
+        lambda thr: MagicMock(),
+    )
+    monkeypatch.setattr(
+        "conversation_deconvolution.diarization.diarizer.SpeakerDiarizer",
+        lambda vad, emb, clus, cfg: FakeTseDiarizer(),
+    )
+    monkeypatch.setattr(
+        "conversation_deconvolution.conversation.semantic.SentenceTransformerEmbedder",
+        lambda model: MagicMock(encode=lambda texts: np.zeros((len(texts), 4))),
+    )
+    monkeypatch.setattr(
+        "conversation_deconvolution.asr.faster_whisper_asr.FasterWhisperAsr",
+        lambda cfg: MagicMock(
+            transcribe=lambda seg, language=None: MagicMock(
+                text="hi", confidence=0.9, language="fr"
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        "conversation_deconvolution.pipeline.build_reconstructor",
+        lambda cfg, emb: MagicMock(reconstruct=lambda utterances: []),
+    )
+
+    cfg = PipelineConfig()
+    cfg.separation.backend = "tse"
+    cfg.separation.enabled = True
+    cfg.tse.model_path = str(tmp_path / "missing.pt")
+
+    pipeline = pipe_mod.build_pipeline(cfg)
+    assert isinstance(pipeline.separator, TseSeparator)
+    assert pipeline.separator.model is not None
+
+    pipeline.stem_embedder = FakeEcapaEmbedder()
+    pipeline.diarizer = FakeTseDiarizer()
+    from conversation_deconvolution.conversation.reconstructor import (
+        HeuristicReconstructor,
+    )
+    from conversation_deconvolution.core.config import ReconstructionConfig
+
+    pipeline.reconstructor = HeuristicReconstructor(_NullEmbedder(), ReconstructionConfig())
+    pipeline.asr = RecordingAsr()
+    audio = np.zeros(3 * SR, dtype=np.float32)
+    result = pipeline.run(audio)
+    assert len(result.utterances) == 2

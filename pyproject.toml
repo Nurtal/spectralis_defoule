@@ -51,7 +51,7 @@ line-length = 95
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-ignore = ["B008", "TRY004"]
+ignore = ["B008", "TRY004", "SIM115"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]

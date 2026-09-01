@@ -1,15 +1,22 @@
-import json
-import numpy as np
-from pathlib import Path
+from __future__ import annotations
 
-from conversation_deconvolution.synthetic.tts import PiperTts
-from conversation_deconvolution.core.config import TseConfig
+import json
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import numpy as np
+
+from conversation_deconvolution.synthetic.scenario import VOICES
+
+if TYPE_CHECKING:
+    from conversation_deconvolution.core.config import TseConfig
 
 
 def _bandlimit_noise(noise, bandwidth_hz, sr=16000):
     if bandwidth_hz <= 0:
         return noise
     from scipy.signal import butter, filtfilt
+
     nyq = sr / 2
     low = bandwidth_hz / nyq
     b, a = butter(4, low, btype="low")
@@ -17,13 +24,21 @@ def _bandlimit_noise(noise, bandwidth_hz, sr=16000):
 
 
 class TseDataset:
-    def __init__(self, tts, config, dataset_dirs):
+    def __init__(self, tts, config: TseConfig, dataset_dirs):
+        if not dataset_dirs:
+            raise ValueError("dataset_dirs must not be empty")
         self.tts = tts
         self.config = config
         self.dataset_dirs = [Path(d) for d in dataset_dirs]
-        self._utterances = []
+        self._utterances: list[dict] = []
         self._load_utterances()
+        if not self._utterances:
+            raise ValueError(f"no utterances found in {dataset_dirs}")
         self._embedder = None
+        speakers_sorted = sorted({u["speaker"] for u in self._utterances})
+        self._speaker_to_voice = {
+            spk: VOICES[i % len(VOICES)] for i, spk in enumerate(speakers_sorted)
+        }
 
     def _load_utterances(self):
         for d in self.dataset_dirs:
@@ -32,20 +47,23 @@ class TseDataset:
                 continue
             data = json.loads(gt_path.read_text())
             for conv in data["conversations"]:
-                for u in conv["utterances"]:
+                cid = str(conv.get("id", "conv"))
+                for idx_u, u in enumerate(conv["utterances"]):
+                    uid = str(u.get("id", f"{cid}_u{idx_u}"))
                     self._utterances.append(
                         {
-                            "id": u["id"],
+                            "id": uid,
                             "speaker": u["speaker"],
-                            "start": u["start"],
-                            "end": u["end"],
-                            "text": u["text"],
+                            "start": float(u["start"]),
+                            "end": float(u["end"]),
+                            "text": str(u.get("text", "")),
                         }
                     )
 
     def _get_embedder(self):
         if self._embedder is None:
             from conversation_deconvolution.diarization.embeddings import EcapaEmbedder
+
             self._embedder = EcapaEmbedder()
         return self._embedder
 
@@ -63,56 +81,62 @@ class TseDataset:
         speakers = sorted({u["speaker"] for u in self._utterances})
         k = rng.integers(2, min(5, len(speakers)) + 1)
         chosen_speakers = rng.choice(speakers, size=k, replace=False)
-        selected = [u for u in self._utterances if u["speaker"] in chosen_speakers]
-        rng.shuffle(selected)
-        selected = selected[:k]
+        mix_utts: dict[str, dict] = {}
+        for spk in chosen_speakers:
+            pool = [u for u in self._utterances if u["speaker"] == spk]
+            mix_utts[spk] = rng.choice(pool)
+        target_idx = int(rng.integers(k))
+        target_speaker = str(chosen_speakers[target_idx])
+        mix_utt_for_target = mix_utts[target_speaker]
+        pool = [
+            u
+            for u in self._utterances
+            if u["speaker"] == target_speaker and u["id"] != mix_utt_for_target["id"]
+        ]
+        if pool:
+            ref_utt = rng.choice(pool)
+        else:
+            ref_utt = mix_utt_for_target
 
         sr = 16000
         dur = 1.0
         mix = np.zeros(int(dur * sr), dtype=np.float32)
         target = np.zeros(int(dur * sr), dtype=np.float32)
-        target_idx = rng.integers(k)
-        target_speaker = chosen_speakers[target_idx]
-        ref_utt = None
 
-        for i, spk in enumerate(chosen_speakers):
-            spk_utt = [u for u in selected if u["speaker"] == spk]
-            if not spk_utt:
-                continue
-            if spk == target_speaker and len(spk_utt) > 1:
-                mix_utt, ref_utt = spk_utt[0], spk_utt[1]
-            elif spk == target_speaker:
-                mix_utt, ref_utt = spk_utt[0], spk_utt[0]
-            else:
-                mix_utt, ref_utt = spk_utt[0], None
-
-            audio, _ = self.tts.synthesize(mix_utt["text"], mix_utt["speaker"])
+        for spk in chosen_speakers:
+            mix_utt = mix_utts[spk]
+            voice = self._speaker_to_voice.get(spk, VOICES[0])
+            audio, _ = self.tts.synthesize(mix_utt["text"], voice)
             audio = np.asarray(audio, dtype=np.float32)
-            seg_dur = mix_utt["end"] - mix_utt["start"]
+            seg_dur = float(mix_utt["end"] - mix_utt["start"])
             start_s = float(rng.uniform(0, max(0, dur - seg_dur)))
             s = int(start_s * sr)
             e = min(s + int(seg_dur * sr), len(mix))
             seg_len = e - s
-            if seg_len > 0 and len(audio) >= seg_len:
-                mix[s:e] += audio[:seg_len]
+            take = min(seg_len, len(audio))
+            if take > 0:
+                mix[s : s + take] += audio[:take]
                 if spk == target_speaker:
-                    target[s:e] += audio[:seg_len]
+                    target[s : s + take] += audio[:take]
 
-        if ref_utt is None:
-            ref_utt = selected[0]
-        ref_audio, _ = self.tts.synthesize(ref_utt["text"], ref_utt["speaker"])
+        ref_voice = self._speaker_to_voice.get(ref_utt["speaker"], VOICES[0])
+        ref_audio, _ = self.tts.synthesize(ref_utt["text"], ref_voice)
         ref_audio = np.asarray(ref_audio, dtype=np.float32)
         ref_emb = self._compute_embedding(ref_audio)
 
-        noise = rng.randn(len(mix)).astype(np.float32)
-        noise = _bandlimit_noise(noise, self.config.noise_bandwidth, sr)
-        signal_power = float(np.mean(target ** 2)) + 1e-8
-        noise_power = float(np.mean(noise ** 2)) + 1e-8
-        scale = np.sqrt(signal_power / noise_power * 10 ** (-self.config.snr_low / 10))
+        noise = rng.standard_normal(len(mix)).astype(np.float32)
+        noise = np.asarray(_bandlimit_noise(noise, self.config.noise_bandwidth, sr))
+        noise = noise.astype(np.float32)
+        signal_power = float(np.mean(target**2)) + 1e-8
+        noise_power = float(np.mean(noise**2)) + 1e-8
+        snr_low = float(self.config.snr_low)
+        snr_high = float(getattr(self.config, "snr_high", snr_low))
+        snr_db = float(rng.uniform(snr_low, snr_high)) if snr_high > snr_low else snr_low
+        scale = np.sqrt(signal_power / noise_power * 10 ** (-snr_db / 10))
         noise = noise * scale
         mix = mix + noise
 
-        return mix.astype(np.float32), target.astype(np.float32), ref_emb, len(chosen_speakers)
+        return mix.astype(np.float32), target.astype(np.float32), ref_emb, int(k)
 
     @classmethod
     def from_existing(cls, tts, config, dataset_dir):

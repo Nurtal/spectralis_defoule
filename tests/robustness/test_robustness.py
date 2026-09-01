@@ -1,15 +1,13 @@
 import json
-import numpy as np
-import soundfile as sf
-import pytest
 
-from conversation_deconvolution.core.config import PipelineConfig, SyntheticConfig
-from conversation_deconvolution.synthetic.generator import SyntheticGenerator
-from conversation_deconvolution.synthetic.scenario import generate_scenario
-from conversation_deconvolution.synthetic.mixer import add_noise, place
-from conversation_deconvolution.core.types import Utterance
+import numpy as np
+import pytest
+import soundfile as sf
+
 from conversation_deconvolution.conversation.reconstructor import HeuristicReconstructor
 from conversation_deconvolution.conversation.semantic import SentenceTransformerEmbedder
+from conversation_deconvolution.core.config import PipelineConfig, SyntheticConfig
+from conversation_deconvolution.synthetic.generator import SyntheticGenerator
 
 
 class FakeTts:
@@ -27,14 +25,15 @@ class FakeTts:
 
 def _make_fake_pipeline():
     text_embedder = SentenceTransformerEmbedder("paraphrase-multilingual-MiniLM-L12-v2")
-    from conversation_deconvolution.core.config import ReconstructionConfig
-    from conversation_deconvolution.pipeline import DeconvolutionPipeline
-    from conversation_deconvolution.diarization.diarizer import SpeakerDiarizer
     from conversation_deconvolution.diarization.vad import SileroVad
-    from conversation_deconvolution.diarization.embeddings import EcapaEmbedder
-    from conversation_deconvolution.diarization.clusterer import AgglomerativeClusterer
-    from conversation_deconvolution.separation.passthrough import PassthroughSeparator
+
     from conversation_deconvolution.asr.faster_whisper_asr import FasterWhisperAsr
+    from conversation_deconvolution.core.config import ReconstructionConfig
+    from conversation_deconvolution.diarization.clusterer import AgglomerativeClusterer
+    from conversation_deconvolution.diarization.diarizer import SpeakerDiarizer
+    from conversation_deconvolution.diarization.embeddings import EcapaEmbedder
+    from conversation_deconvolution.pipeline import DeconvolutionPipeline
+    from conversation_deconvolution.separation.passthrough import PassthroughSeparator
 
     vad = SileroVad(PipelineConfig().vad)
     embedder = EcapaEmbedder()
@@ -67,6 +66,7 @@ class TestRobustnessPhase7:
         assert (out / "mixed.wav").exists()
         # Vérifier la vérité terrain
         import json
+
         gt = json.load(open(out / "ground_truth.json"))
         assert len(gt["conversations"]) == 2
 
@@ -76,10 +76,11 @@ class TestRobustnessPhase7:
         cfg = SyntheticConfig(sample_rate=16000, snr_db=15)
         gen = SyntheticGenerator(FakeTts(), cfg)
         out = gen.generate(
-            tmp_path / "ds", seed=42,
+            tmp_path / "ds",
+            seed=42,
             n_conversations=2,
             speakers_per_thread=n_speakers,
-            n_lines=(3, 5)
+            n_lines=(3, 5),
         )
         assert (out / "mixed.wav").exists()
         gt = json.load(open(out / "ground_truth.json"))
@@ -93,6 +94,7 @@ class TestRobustnessPhase7:
     def test_reconstruction_gap_config(self, max_gap):
         """Tester la configuration du gap maximum pour la reconstruction."""
         from conversation_deconvolution.core.config import ReconstructionConfig
+
         cfg = ReconstructionConfig(max_gap=max_gap)
         assert cfg.max_gap == max_gap
 
@@ -116,10 +118,11 @@ class TestRobustnessPhase7:
         cfg = SyntheticConfig(sample_rate=16000, snr_db=15)
         gen = SyntheticGenerator(FakeTts(), cfg)
         out = gen.generate(
-            tmp_path / "ds", seed=42,
+            tmp_path / "ds",
+            seed=42,
             n_conversations=n_conversations,
             speakers_per_thread=2,
-            n_lines=(3, 5)
+            n_lines=(3, 5),
         )
         assert (out / "mixed.wav").exists()
         gt = json.load(open(out / "ground_truth.json"))
@@ -129,9 +132,22 @@ class TestRobustnessPhase7:
         """Vérifier que la génération est reproductible avec le même seed."""
         cfg = SyntheticConfig(sample_rate=16000, snr_db=15)
         gen = SyntheticGenerator(FakeTts(), cfg)
-        out1 = gen.generate(tmp_path / "ds1", seed=123, n_conversations=2, speakers_per_thread=2, n_lines=(3, 5))
-        out2 = gen.generate(tmp_path / "ds2", seed=123, n_conversations=2, speakers_per_thread=2, n_lines=(3, 5))
+        out1 = gen.generate(
+            tmp_path / "ds1",
+            seed=123,
+            n_conversations=2,
+            speakers_per_thread=2,
+            n_lines=(3, 5),
+        )
+        out2 = gen.generate(
+            tmp_path / "ds2",
+            seed=123,
+            n_conversations=2,
+            speakers_per_thread=2,
+            n_lines=(3, 5),
+        )
         import json
+
         gt1 = json.load(open(out1 / "ground_truth.json"))
         gt2 = json.load(open(out2 / "ground_truth.json"))
         assert gt1 == gt2

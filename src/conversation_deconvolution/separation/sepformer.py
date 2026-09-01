@@ -23,7 +23,9 @@ class SepformerSeparator:
             )
         return self._model
 
-    def separate(self, mix: np.ndarray, regions: list[Segment]) -> SeparationResult:
+    def separate(
+        self, mix: np.ndarray, regions: list[Segment], speaker_refs: dict | None = None
+    ) -> SeparationResult:
         import torch
 
         min_sec = self.cfg.min_region_sec if self.cfg else 0.4

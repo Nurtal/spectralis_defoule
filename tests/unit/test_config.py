@@ -113,3 +113,17 @@ def test_faster_whisper_asr_passes_beam_and_prompt(monkeypatch):
     asr.transcribe(np.zeros(16000, dtype=np.float32))
     assert captured["beam_size"] == 7
     assert captured["initial_prompt"] == "test prompt"
+
+
+def test_separation_backend_loads(tmp_path):
+    p = tmp_path / "sep2.yaml"
+    p.write_text("separation:\n  backend: tse\n  enabled: true\n")
+    cfg = PipelineConfig.from_yaml(p)
+    assert cfg.separation.backend == "tse"
+    assert cfg.separation.enabled is True
+
+
+def test_separation_backend_default():
+    cfg = PipelineConfig.default()
+    assert cfg.separation.backend == "sepformer"
+    assert cfg.separation.enabled is False

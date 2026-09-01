@@ -10,4 +10,6 @@ benchmark:
 	uv run deconvolute benchmark --datasets 3 --out reports/benchmark.md
 train:
 	uv run deconvolute train --datasets 8 --out models/graph_lr.json
-.PHONY: lint format test test-slow benchmark train
+train-tse:
+	uv run deconvolute train-tse --epochs 30 --out models/tse/model.pt
+.PHONY: lint format test test-slow benchmark train train-tse

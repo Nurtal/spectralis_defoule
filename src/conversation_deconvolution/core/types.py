@@ -23,6 +23,7 @@ class SeparatedRegion:
 class SeparationResult:
     mix: np.ndarray
     regions: list[SeparatedRegion] = field(default_factory=list)
+    meta: dict = field(default_factory=dict)
 
     @property
     def sources(self) -> list[np.ndarray]:
