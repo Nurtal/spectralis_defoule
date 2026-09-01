@@ -54,15 +54,18 @@ class TseModel(nn.Module):
             nn.ReLU(inplace=True),
         )
         self.blocks = nn.ModuleList([FilmBlock(channels) for _ in range(n_blocks)])
+        self.cond_conv = nn.Conv2d(channels + embed_dim, channels, 1)
         self.decoder = nn.Sequential(
             nn.Conv2d(channels, channels, 3, padding=1),
             nn.BatchNorm2d(channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(channels, 2, 3, padding=1),
+            nn.Conv2d(channels, 1, 3, padding=1),
         )
-        self.gamma_fc = nn.Sequential(nn.Linear(embed_dim, channels), nn.Sigmoid())
-        self.beta_fc = nn.Sequential(nn.Linear(embed_dim, channels), nn.Sigmoid())
+        self.gamma_fc = nn.Linear(embed_dim, channels)
+        self.beta_fc = nn.Linear(embed_dim, channels)
         self.sigmoid = nn.Sigmoid()
+        nn.init.ones_(self.gamma_fc.bias)
+        nn.init.zeros_(self.beta_fc.bias)
 
     def forward(self, mix, ref_emb):
         spec = _stft(mix, self.n_fft, self.hop, self.window)
@@ -74,15 +77,19 @@ class TseModel(nn.Module):
         beta = self.beta_fc(ref_emb).view(-1, self.channels, 1, 1)
         for block in self.blocks:
             x = block(x, gamma, beta)
-        mask_parts = self.decoder(x)
-        mask_real = self.sigmoid(mask_parts[:, 0])
-        mask_imag = self.sigmoid(mask_parts[:, 1])
-        mask = torch.complex(mask_real, mask_imag)
+        b, _, f, t = x.shape
+        emb_tiled = ref_emb.view(b, -1, 1, 1).expand(b, ref_emb.shape[1], f, t)
+        x = torch.cat([x, emb_tiled], dim=1)
+        x = self.cond_conv(x)
+        mask = self.sigmoid(self.decoder(x).squeeze(1))
         return mask
 
     def apply_mask(self, mix, mask):
         spec = _stft(mix, self.n_fft, self.hop, self.window)
-        masked_spec = mask * spec
+        if mask.is_complex():
+            masked_spec = mask * spec
+        else:
+            masked_spec = mask * spec
         return _istft(masked_spec, mix, self.n_fft, self.hop, self.window)
 
     def compute_loss(self, mix, target, ref_emb):

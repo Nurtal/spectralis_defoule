@@ -81,6 +81,8 @@ class TseDataset:
         speakers = sorted({u["speaker"] for u in self._utterances})
         k = rng.integers(2, min(5, len(speakers)) + 1)
         chosen_speakers = rng.choice(speakers, size=k, replace=False)
+        voice_pool = rng.choice(VOICES, size=k, replace=False)
+        voice_map = dict(zip(chosen_speakers, voice_pool))
         mix_utts: dict[str, dict] = {}
         for spk in chosen_speakers:
             pool = [u for u in self._utterances if u["speaker"] == spk]
@@ -105,7 +107,7 @@ class TseDataset:
 
         for spk in chosen_speakers:
             mix_utt = mix_utts[spk]
-            voice = self._speaker_to_voice.get(spk, VOICES[0])
+            voice = voice_map.get(spk, VOICES[0])
             audio, _ = self.tts.synthesize(mix_utt["text"], voice)
             audio = np.asarray(audio, dtype=np.float32)
             seg_dur = float(mix_utt["end"] - mix_utt["start"])
@@ -119,7 +121,7 @@ class TseDataset:
                 if spk == target_speaker:
                     target[s : s + take] += audio[:take]
 
-        ref_voice = self._speaker_to_voice.get(ref_utt["speaker"], VOICES[0])
+        ref_voice = voice_map.get(ref_utt["speaker"], VOICES[0])
         ref_audio, _ = self.tts.synthesize(ref_utt["text"], ref_voice)
         ref_audio = np.asarray(ref_audio, dtype=np.float32)
         ref_emb = self._compute_embedding(ref_audio)

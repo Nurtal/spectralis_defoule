@@ -53,10 +53,13 @@ def test_mask_applied_is_bounded():
     ref_emb = torch.randn(1, 192)
     with torch.no_grad():
         mask = model(mix, ref_emb)
-    mask_real = mask.real
-    mask_imag = mask.imag
-    assert mask_real.min() >= 0 and mask_real.max() <= 1
-    assert mask_imag.min() >= 0 and mask_imag.max() <= 1
+    if mask.is_complex():
+        mask_real = mask.real
+        mask_imag = mask.imag
+        assert mask_real.min() >= 0 and mask_real.max() <= 1
+        assert mask_imag.min() >= 0 and mask_imag.max() <= 1
+    else:
+        assert mask.min() >= 0 and mask.max() <= 1
 
 
 def test_si_sdr_positive():
