@@ -63,7 +63,15 @@ class ReconstructionConfig:
 class SyntheticConfig:
     sample_rate: int = 16000
     snr_db: float = 15.0
+    snr_low: float = 5.0
+    snr_high: float = 20.0
     mean_gap_sec: float = 0.8
+    mean_gap_low: float = 0.4
+    mean_gap_high: float = 1.2
+    gain_low_db: float = -6.0
+    gain_high_db: float = 6.0
+    rir_prob: float = 0.3
+    rir_decay: float = 3.0
     min_words: int = 3
     max_words: int = 14
 

@@ -37,7 +37,15 @@ reconstruction:
 synthetic:
   sample_rate: 16000
   snr_db: 15.0
+  snr_low: 5.0
+  snr_high: 20.0
   mean_gap_sec: 0.8
+  mean_gap_low: 0.4
+  mean_gap_high: 1.2
+  gain_low_db: -6.0
+  gain_high_db: 6.0
+  rir_prob: 0.3
+  rir_decay: 3.0
   min_words: 3
   max_words: 14
 graph:
