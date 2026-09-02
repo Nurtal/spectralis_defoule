@@ -4,7 +4,9 @@ from conversation_deconvolution.tse.model import TseModel, _si_sdr
 
 
 def test_forward_shapes():
-    model = TseModel(n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32)
+    model = TseModel(
+        n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32
+    )
     model.eval()
     mix = torch.randn(1, 16000)
     ref_emb = torch.randn(1, 192)
@@ -18,7 +20,9 @@ def test_forward_shapes():
 def test_loss_reduces():
     import math
 
-    model = TseModel(n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32)
+    model = TseModel(
+        n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32
+    )
     model.eval()
     mix = torch.randn(1, 16000)
     ref_emb = torch.randn(1, 192)
@@ -29,13 +33,17 @@ def test_loss_reduces():
 
 
 def test_param_count():
-    model = TseModel(n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32)
+    model = TseModel(
+        n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32
+    )
     n_params = sum(p.numel() for p in model.parameters())
     assert 1_000_000 <= n_params <= 2_500_000
 
 
 def test_deterministic():
-    model = TseModel(n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32)
+    model = TseModel(
+        n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32
+    )
     model.eval()
     mix = torch.randn(1, 16000)
     ref_emb = torch.randn(1, 192)
@@ -46,7 +54,9 @@ def test_deterministic():
 
 
 def test_mask_applied_is_bounded():
-    model = TseModel(n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32)
+    model = TseModel(
+        n_fft=512, hop=256, channels=128, embed_dim=192, n_blocks=3, freq_bands=32
+    )
     model.eval()
     mix = torch.randn(1, 16000)
     ref_emb = torch.randn(1, 192)
@@ -70,6 +80,7 @@ def test_si_sdr_positive():
 
 def test_film_block_v2_per_freq_shapes():
     from conversation_deconvolution.tse.model import FilmBlockV2
+
     block = FilmBlockV2(channels=64)
     x = torch.randn(2, 64, 257, 50)
     gamma = torch.randn(2, 64, 32, 1)
@@ -80,6 +91,7 @@ def test_film_block_v2_per_freq_shapes():
 
 def test_conditioning_mlp_output_shape():
     from conversation_deconvolution.tse.model import ConditioningMLP
+
     mlp = ConditioningMLP(embed_dim=192, channels=64, freq_bands=32)
     emb = torch.randn(2, 192)
     gamma, beta = mlp(emb)
@@ -89,6 +101,7 @@ def test_conditioning_mlp_output_shape():
 
 def test_tse_model_v2_forward_shapes():
     from conversation_deconvolution.tse.model import TseModel
+
     model = TseModel(n_fft=512, hop=256, channels=64, embed_dim=192, n_blocks=3, freq_bands=32)
     model.eval()
     mix = torch.randn(1, 16000)
@@ -102,6 +115,7 @@ def test_tse_model_v2_forward_shapes():
 
 def test_param_count_default():
     from conversation_deconvolution.tse.model import TseModel
+
     model = TseModel(n_fft=512, hop=256, channels=64, embed_dim=192, n_blocks=3, freq_bands=32)
     n_params = sum(p.numel() for p in model.parameters())
     assert 500_000 <= n_params <= 1_000_000
@@ -109,7 +123,9 @@ def test_param_count_default():
 
 def test_contrastive_loss():
     import math
+
     from conversation_deconvolution.tse.model import TseModel
+
     model = TseModel(n_fft=512, hop=256, channels=64, embed_dim=192, n_blocks=3, freq_bands=32)
     model.eval()
     mix = torch.randn(1, 16000)

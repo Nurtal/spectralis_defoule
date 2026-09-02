@@ -39,7 +39,9 @@ def train_tse_model(dataset, config: TseConfig, out_path: str) -> str:
                 )
             optimizer.zero_grad()
             loss = model.compute_loss(
-                mix, target, ref_emb,
+                mix,
+                target,
+                ref_emb,
                 lambda_rec=config.lambda_rec,
                 lambda_sim=config.lambda_sim,
             )

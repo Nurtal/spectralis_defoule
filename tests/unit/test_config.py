@@ -131,6 +131,7 @@ def test_separation_backend_default():
 
 def test_tse_config_new_fields():
     from conversation_deconvolution.core.config import TseConfig
+
     cfg = TseConfig()
     assert cfg.freq_bands == 32
     assert cfg.lambda_rec == 0.5
