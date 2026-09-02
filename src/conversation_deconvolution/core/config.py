@@ -104,6 +104,9 @@ class TseConfig:
     snr_low: float = 10.0
     snr_high: float = 20.0
     noise_bandwidth: float = 3400.0
+    freq_bands: int = 32
+    lambda_rec: float = 0.5
+    lambda_sim: float = 0.5
 
 
 @dataclass

@@ -72,5 +72,8 @@ tse:
   snr_low: 10.0
   snr_high: 20.0
   noise_bandwidth: 3400.0
+  freq_bands: 32
+  lambda_rec: 0.5
+  lambda_sim: 0.5
 reconstructor_kind: heuristic
 text_embedding_model: paraphrase-multilingual-MiniLM-L12-v2
