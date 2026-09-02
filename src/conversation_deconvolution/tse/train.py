@@ -16,6 +16,7 @@ def train_tse_model(dataset, config: TseConfig, out_path: str) -> str:
         channels=config.channels,
         embed_dim=config.embed_dim,
         n_blocks=config.n_blocks,
+        freq_bands=config.freq_bands,
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
@@ -37,7 +38,11 @@ def train_tse_model(dataset, config: TseConfig, out_path: str) -> str:
                     torch.from_numpy(np.asarray(ref_emb, dtype=np.float64)).to(device).float()
                 )
             optimizer.zero_grad()
-            loss = -model.compute_loss(mix, target, ref_emb).mean()
+            loss = model.compute_loss(
+                mix, target, ref_emb,
+                lambda_rec=config.lambda_rec,
+                lambda_sim=config.lambda_sim,
+            )
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
             optimizer.step()
@@ -63,7 +68,10 @@ def _save_hparams(config: TseConfig, model_path: str) -> None:
                 "n_blocks": config.n_blocks,
                 "channels": config.channels,
                 "embed_dim": config.embed_dim,
+                "freq_bands": config.freq_bands,
                 "lr": config.lr,
+                "lambda_rec": config.lambda_rec,
+                "lambda_sim": config.lambda_sim,
             },
             f,
             default_flow_style=False,
