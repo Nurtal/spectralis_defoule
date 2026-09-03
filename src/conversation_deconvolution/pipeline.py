@@ -164,9 +164,18 @@ class DeconvolutionPipeline:
 
         utterances: list[Utterance] = []
         cache: dict = {"refs": {}, "stem_embs": {}}
+        speaker_history: dict[str, list[str]] = {}
         for i, turn in enumerate(turns):
             signal, _used = self._turn_signal(turn, sep_result, cache)
-            asr_res = self.asr.transcribe(signal)
+            speaker_ctx = None
+            if self.cfg.asr.use_speaker_beam and turn.speaker:
+                history = speaker_history.get(turn.speaker, [])
+                if history:
+                    speaker_ctx = " ".join(history[-3:])
+            try:
+                asr_res = self.asr.transcribe(signal, speaker_context=speaker_ctx)
+            except TypeError:
+                asr_res = self.asr.transcribe(signal)
             utterances.append(
                 Utterance(
                     id=f"utt_{i:03d}",
@@ -178,6 +187,8 @@ class DeconvolutionPipeline:
                     language=asr_res.language,
                 )
             )
+            if turn.speaker and asr_res.text.strip():
+                speaker_history.setdefault(turn.speaker, []).append(asr_res.text.strip())
         conversations = self.reconstructor.reconstruct(utterances)
         return TranscriptResult(
             utterances=utterances, conversations=conversations, overlaps=overlaps

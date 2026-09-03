@@ -29,24 +29,25 @@ class FasterWhisperAsr:
             )
         return self._model
 
-    def transcribe(self, segment: np.ndarray, language: str | None = None) -> AsrResult:
+    def transcribe(
+        self,
+        segment: np.ndarray,
+        language: str | None = None,
+        speaker_context: str | None = None,
+    ) -> AsrResult:
         model = self._ensure_model()
         audio = np.asarray(segment, dtype=np.float32)
         beam_size = self.cfg.beam_size
-        if (
-            self.cfg.use_speaker_beam
-            and hasattr(model, "set_beam_size")
-            and hasattr(model, "get_beam_size")
-        ):
-            # Speaker-dependent beam search would be implemented here
-            # This is a placeholder for N2 improvement
-            pass
+        initial_prompt = self.cfg.initial_prompt
+        if speaker_context and self.cfg.use_speaker_beam:
+            prompt = f"{speaker_context} " if not initial_prompt else f"{initial_prompt} {speaker_context}"
+            initial_prompt = prompt
         seg_iter, info = model.transcribe(
             audio,
             language=language or self.cfg.language,
             beam_size=beam_size,
             vad_filter=False,
-            initial_prompt=self.cfg.initial_prompt,
+            initial_prompt=initial_prompt,
         )
         texts = []
         logprobs = []
