@@ -74,6 +74,7 @@ class SyntheticConfig:
     rir_decay: float = 3.0
     min_words: int = 3
     max_words: int = 14
+    tts_backend: str = "piper"
 
 
 @dataclass

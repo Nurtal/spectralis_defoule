@@ -144,14 +144,16 @@ def synth(
     seed: int = typer.Option(0, "--seed"),
     snr_db: float = typer.Option(None, "--snr-db"),
     config_path: Path = typer.Option(None, "--config", "-c"),
+    tts_backend: str = typer.Option("piper", "--tts-backend"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if snr_db is not None:
         cfg.synthetic.snr_db = snr_db
+    cfg.synthetic.tts_backend = tts_backend
     from conversation_deconvolution.synthetic.generator import SyntheticGenerator
-    from conversation_deconvolution.synthetic.tts import PiperTts
+    from conversation_deconvolution.synthetic.tts import create_tts
 
-    gen = SyntheticGenerator(PiperTts(), cfg.synthetic)
+    gen = SyntheticGenerator(create_tts(cfg.synthetic.tts_backend), cfg.synthetic)
     path = gen.generate(
         out_dir, seed=seed, n_conversations=conversations, speakers_per_thread=speakers
     )
@@ -186,6 +188,7 @@ def benchmark(
     reconstructor: str = typer.Option("heuristic", "--reconstructor"),
     diarization_backend: str = typer.Option("custom", "--diarization-backend"),
     separation_backend: str | None = typer.Option(None, "--separation-backend"),
+    tts_backend: str = typer.Option("piper", "--tts-backend"),
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     if separate is not None:
@@ -198,6 +201,7 @@ def benchmark(
             raise typer.BadParameter("--separation-backend: passthrough|sepformer|tse")
         cfg.separation.backend = separation_backend
         cfg.separation.enabled = separation_backend != "passthrough"
+    cfg.synthetic.tts_backend = tts_backend
     kinds = {
         "both": ["heuristic", "graph"],
         "heuristic": ["heuristic"],
@@ -233,9 +237,9 @@ def train(
         save_model,
     )
     from conversation_deconvolution.synthetic.generator import SyntheticGenerator
-    from conversation_deconvolution.synthetic.tts import PiperTts
+    from conversation_deconvolution.synthetic.tts import create_tts
 
-    generator = SyntheticGenerator(PiperTts(), cfg.synthetic)
+    generator = SyntheticGenerator(create_tts(cfg.synthetic.tts_backend), cfg.synthetic)
     dirs = []
     for k in range(datasets):
         target = Path(f"data/synthetic/train_{seed_base}_{k}")
@@ -275,11 +279,11 @@ def train_tse(
 ):
     cfg = PipelineConfig.from_yaml(config_path) if config_path else PipelineConfig.default()
     cfg.tse.epochs = epochs
-    from conversation_deconvolution.synthetic.tts import PiperTts
+    from conversation_deconvolution.synthetic.tts import create_tts
     from conversation_deconvolution.tse.dataset import TseDataset
     from conversation_deconvolution.tse.train import train_tse_model
 
-    tts = PiperTts()
+    tts = create_tts(cfg.synthetic.tts_backend)
     dirs = sorted(Path("data/synthetic").glob(f"train_{seed_base}_*"))
     if not dirs:
         dirs = sorted(Path("data/synthetic").glob("train_3000_*"))
@@ -380,9 +384,9 @@ def run_benchmark(
     from conversation_deconvolution.core.types import result_from_dict
     from conversation_deconvolution.pipeline import build_pipeline
     from conversation_deconvolution.synthetic.generator import SyntheticGenerator
-    from conversation_deconvolution.synthetic.tts import PiperTts
+    from conversation_deconvolution.synthetic.tts import create_tts
 
-    generator = SyntheticGenerator(PiperTts(), cfg.synthetic)
+    generator = SyntheticGenerator(create_tts(cfg.synthetic.tts_backend), cfg.synthetic)
     n_speakers = 2 * 2
     cfg.diarization.num_speakers = n_speakers
     ds_dirs = []
